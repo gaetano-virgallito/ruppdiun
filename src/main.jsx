@@ -7,18 +7,3 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     <App />
   </React.StrictMode>,
 )
-```
-
----
-
-### **File 5: `src/App.jsx`**
-Copia **tutto il codice dell'artifact** (quello che vedi nella sezione blu a destra)
-
----
-
-### **File 6: `.gitignore`**
-```
-node_modules
-dist
-.env
-.DS_Store
