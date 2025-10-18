@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
-import { Plus, Trash2, Check, Clock, AlertCircle, LogOut, Eye, EyeOff, DollarSign } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Plus, Trash2, Check, Clock, LogOut, Eye, EyeOff, DollarSign } from 'lucide-react';
+import { db } from './firebase';
+import { collection, addDoc, getDocs, updateDoc, deleteDoc, doc, onSnapshot } from 'firebase/firestore';
 
 export default function GestionaleRistorante() {
   const [role, setRole] = useState(null);
@@ -9,25 +11,60 @@ export default function GestionaleRistorante() {
   const [completedOrders, setCompletedOrders] = useState([]);
   const [hiddenDishes, setHiddenDishes] = useState([]);
   
-  // Form menu
   const [newDish, setNewDish] = useState({ name: '', price: '', category: 'Antipasti', notes: '', allergens: '' });
   const [selectedTable, setSelectedTable] = useState(null);
   const [currentOrderItems, setCurrentOrderItems] = useState([]);
   const [showMenu, setShowMenu] = useState(false);
   const [selectedTableForPayment, setSelectedTableForPayment] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  // Carica menu da Firebase
+  useEffect(() => {
+    const unsubscribe = onSnapshot(collection(db, 'menu'), (snapshot) => {
+      const menuData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setMenu(menuData);
+      setLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Carica ordini da Firebase
+  useEffect(() => {
+    const unsubscribe = onSnapshot(collection(db, 'orders'), (snapshot) => {
+      const ordersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setOrders(ordersData.filter(o => !o.paid));
+      setCompletedOrders(ordersData.filter(o => o.paid));
+    });
+    return () => unsubscribe();
+  }, []);
 
   // Aggiungi piatto al menu
-  const addDish = () => {
+  const addDish = async () => {
     if (newDish.name && newDish.price) {
-      setMenu([...menu, { ...newDish, id: Date.now(), price: parseFloat(newDish.price) }]);
-      setNewDish({ name: '', price: '', category: 'Antipasti', notes: '', allergens: '' });
+      try {
+        await addDoc(collection(db, 'menu'), {
+          name: newDish.name,
+          price: parseFloat(newDish.price),
+          category: newDish.category,
+          notes: newDish.notes,
+          allergens: newDish.allergens,
+          createdAt: new Date()
+        });
+        setNewDish({ name: '', price: '', category: 'Antipasti', notes: '', allergens: '' });
+      } catch (error) {
+        console.error('Errore nell\'aggiunta del piatto:', error);
+      }
     }
   };
 
   // Rimuovi piatto dal menu
-  const removeDish = (id) => {
-    setMenu(menu.filter(d => d.id !== id));
-    setHiddenDishes(hiddenDishes.filter(hd => hd !== id));
+  const removeDish = async (id) => {
+    try {
+      await deleteDoc(doc(db, 'menu', id));
+      setHiddenDishes(hiddenDishes.filter(hd => hd !== id));
+    } catch (error) {
+      console.error('Errore nella rimozione del piatto:', error);
+    }
   };
 
   // Nascondi/Mostra piatto
@@ -49,32 +86,35 @@ export default function GestionaleRistorante() {
     }
   };
 
-  // Salva ordine
-  const saveOrder = () => {
+  // Salva ordine in Firebase
+  const saveOrder = async () => {
     if (selectedTable && currentOrderItems.length > 0) {
-      const orderId = Date.now();
-      const newOrder = {
-        id: orderId,
-        tableId: selectedTable,
-        items: currentOrderItems,
-        status: 'nuovo',
-        timestamp: new Date().toLocaleTimeString('it-IT'),
-        total: currentOrderItems.reduce((sum, item) => sum + item.price * item.qty, 0),
-        paid: false
-      };
-      setOrders([...orders, newOrder]);
-      setTables(tables.map(t => t.id === selectedTable ? { ...t, status: 'occupato' } : t));
-      setCurrentOrderItems([]);
-      setSelectedTable(null);
-      setShowMenu(false);
+      try {
+        await addDoc(collection(db, 'orders'), {
+          tableId: selectedTable,
+          items: currentOrderItems,
+          status: 'nuovo',
+          timestamp: new Date().toLocaleTimeString('it-IT'),
+          total: currentOrderItems.reduce((sum, item) => sum + item.price * item.qty, 0),
+          paid: false,
+          createdAt: new Date()
+        });
+        setCurrentOrderItems([]);
+        setSelectedTable(null);
+        setShowMenu(false);
+      } catch (error) {
+        console.error('Errore nel salvataggio dell\'ordine:', error);
+      }
     }
   };
 
-  // Cambia stato ordine in cucina
-  const updateOrderStatus = (orderId, newStatus) => {
-    setOrders(orders.map(order =>
-      order.id === orderId ? { ...order, status: newStatus } : order
-    ));
+  // Aggiorna stato ordine
+  const updateOrderStatus = async (orderId, newStatus) => {
+    try {
+      await updateDoc(doc(db, 'orders', orderId), { status: newStatus });
+    } catch (error) {
+      console.error('Errore nell\'aggiornamento dello stato:', error);
+    }
   };
 
   // Rimuovi piatto dall'ordine corrente
@@ -91,20 +131,19 @@ export default function GestionaleRistorante() {
     }
   };
 
-  // Modifica note ordine
+  // Modifica note
   const updateNotes = (index, notes) => {
     setCurrentOrderItems(currentOrderItems.map((item, i) =>
       i === index ? { ...item, notes } : item
     ));
   };
 
-  // Segna come pagato e sposta negli ordini completati
-  const markAsPaid = (orderId) => {
-    const order = orders.find(o => o.id === orderId);
-    if (order) {
-      setCompletedOrders([...completedOrders, { ...order, paid: true, paidAt: new Date().toLocaleTimeString('it-IT') }]);
-      setOrders(orders.filter(o => o.id !== orderId));
-      setTables(tables.map(t => t.id === order.tableId ? { ...t, status: 'libero' } : t));
+  // Segna come pagato
+  const markAsPaid = async (orderId) => {
+    try {
+      await updateDoc(doc(db, 'orders', orderId), { paid: true });
+    } catch (error) {
+      console.error('Errore nel pagamento:', error);
     }
   };
 
@@ -308,7 +347,7 @@ export default function GestionaleRistorante() {
                 <h2 className="text-xl font-semibold text-gray-800 mb-4">Tavoli</h2>
                 <div className="grid grid-cols-3 gap-2">
                   {tables.map(table => (
-                    <button key={table.id} onClick={() => setSelectedTable(table.id)} className={`p-3 rounded-lg font-bold text-sm transition ${selectedTable === table.id ? 'bg-blue-500 text-white' : table.status === 'libero' ? 'bg-green-100 text-green-800 hover:bg-green-200' : 'bg-orange-100 text-orange-800 hover:bg-orange-200'}`}>
+                    <button key={table.id} onClick={() => setSelectedTable(table.id)} className={`p-3 rounded-lg font-bold text-sm transition ${selectedTable === table.id ? 'bg-blue-500 text-white' : orders.some(o => o.tableId === table.id) ? 'bg-orange-100 text-orange-800 hover:bg-orange-200' : 'bg-green-100 text-green-800 hover:bg-green-200'}`}>
                       T{table.id}
                     </button>
                   ))}
@@ -479,7 +518,8 @@ export default function GestionaleRistorante() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {activeOrders.map(order => {
                 const nonBeverageItems = order.items.filter(item => {
-                  const dish = menu.find(d => d.id === item.dishId);
+                  const dish = menu.find(d => d.id === item.dish
+                                         Id);
                   return dish && dish.category !== 'Bevande';
                 });
                 
