@@ -1,25 +1,23 @@
 import { useState, useEffect } from 'react';
 
-const GITHUB_REPO = "gaetano-virgallito/ruppdiun";
-const GITHUB_TOKEN = "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";
-const DB_FILE = "database.json";
+const BIN_ID = "68f4dde3ae596e708f1ca00d";
+const MASTER_KEY = "$2a$10$grxqdSInpaAGhJAk2asU7OBXiq7Jf3GcyQdIO2hRP42tzOoYCPeai";
 
 export function useDatabase() {
   const [menu, setMenu] = useState([]);
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Leggi i dati da GitHub
+  // Leggi i dati da JSON Bin
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await fetch(
-          `https://api.github.com/repos/${GITHUB_REPO}/contents/${DB_FILE}`
-        );
+        const response = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
+          headers: { "X-Master-Key": MASTER_KEY }
+        });
         const data = await response.json();
-        const dbContent = JSON.parse(atob(data.content));
-        setMenu(dbContent.menu || []);
-        setOrders(dbContent.orders || []);
+        setMenu(data.record.menu || []);
+        setOrders(data.record.orders || []);
       } catch (error) {
         console.error("Errore nel caricamento:", error);
       }
@@ -28,32 +26,19 @@ export function useDatabase() {
     fetchData();
   }, []);
 
-  // Salva i dati su GitHub
+  // Salva i dati su JSON Bin
   const saveData = async (newMenu, newOrders) => {
     try {
-      const dbContent = { menu: newMenu, orders: newOrders };
-      const encoded = btoa(JSON.stringify(dbContent, null, 2));
-      
-      const response = await fetch(
-        `https://api.github.com/repos/${GITHUB_REPO}/contents/${DB_FILE}`,
-        {
-          method: "PUT",
-          headers: {
-            "Authorization": `token ${GITHUB_TOKEN}`,
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            message: "Update database",
-            content: encoded
-          })
-        }
-      );
-      
-      if (!response.ok) {
-        console.error("Errore nel salvataggio");
-      }
+      await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Master-Key": MASTER_KEY
+        },
+        body: JSON.stringify({ menu: newMenu, orders: newOrders })
+      });
     } catch (error) {
-      console.error("Errore:", error);
+      console.error("Errore nel salvataggio:", error);
     }
   };
 
