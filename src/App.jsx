@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Plus, Trash2, Check, Clock, LogOut, Eye, EyeOff, DollarSign } from 'lucide-react';
 import { useDatabase } from './useDatabase';
 import { playSound } from './sounds';
-import React, { useState, useEffect, useRef } from 'react';
 
 export default function GestionaleRistorante() {
   const { menu: dbMenu, kitchenOrders: dbKitchenOrders, barOrders: dbBarOrders, loading, saveData } = useDatabase();
