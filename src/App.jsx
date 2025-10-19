@@ -11,6 +11,7 @@ export default function GestionaleRistorante() {
   const [barOrders, setBarOrders] = useState([]);
   const [tables, setTables] = useState(Array.from({length: 12}, (_, i) => ({ id: i+1, status: 'libero' })));
   const [hiddenDishes, setHiddenDishes] = useState([]);
+  const [heardOrderIds, setHeardOrderIds] = useState([]);
   
   const [newDish, setNewDish] = useState({ name: '', price: '', category: 'Antipasti', notes: '', allergens: '' });
   const [selectedTable, setSelectedTable] = useState(null);
@@ -58,6 +59,27 @@ useEffect(() => {
     });
   }
 }, [kitchenOrders, barOrders, role]);
+  useEffect(() => {
+  if (role === 'cucina') {
+    kitchenOrders.forEach(order => {
+      if (order.status === 'nuovo' && !heardOrderIds.includes(order.id)) {
+        playSound('newOrder');
+        setHeardOrderIds([...heardOrderIds, order.id]);
+      }
+    });
+  }
+}, [kitchenOrders, role]);
+
+useEffect(() => {
+  if (role === 'bar') {
+    barOrders.forEach(order => {
+      if (order.status === 'nuovo' && !heardOrderIds.includes(order.id)) {
+        playSound('newOrder');
+        setHeardOrderIds([...heardOrderIds, order.id]);
+      }
+    });
+  }
+}, [barOrders, role]);
 
   const addDish = async () => {
     if (newDish.name && newDish.price) {
