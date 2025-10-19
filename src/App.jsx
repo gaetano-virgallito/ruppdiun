@@ -694,6 +694,11 @@ export default function GestionaleRistorante() {
   // CUCINA
   // ========================================
   if (role === 'cucina') {
+    // Ordina gli ordini dal più recente al meno recente
+    const sortedKitchenOrders = [...kitchenOrders].sort((a, b) => {
+      return b.id.localeCompare(a.id);
+    });
+
     return (
       <div className="min-h-screen bg-gradient-to-br from-red-50 to-red-100 p-4">
         <div className="max-w-6xl mx-auto">
@@ -705,13 +710,13 @@ export default function GestionaleRistorante() {
             </button>
           </div>
 
-          {kitchenOrders.length === 0 ? (
+          {sortedKitchenOrders.length === 0 ? (
             <div className="text-center py-12 bg-white rounded-lg shadow-lg">
               <p className="text-2xl text-gray-500">✨ Nessun ordine in attesa</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {kitchenOrders.map(order => (
+              {sortedKitchenOrders.map(order => (
                 <div 
                   key={order.id} 
                   className={`p-6 rounded-lg shadow-lg ${
@@ -774,6 +779,11 @@ export default function GestionaleRistorante() {
   // BAR
   // ========================================
   if (role === 'bar') {
+    // Ordina gli ordini dal più recente al meno recente
+    const sortedBarOrders = [...barOrders].sort((a, b) => {
+      return b.id.localeCompare(a.id);
+    });
+
     return (
       <div className="min-h-screen bg-gradient-to-br from-cyan-50 to-cyan-100 p-4">
         <div className="max-w-6xl mx-auto">
@@ -785,13 +795,13 @@ export default function GestionaleRistorante() {
             </button>
           </div>
 
-          {barOrders.length === 0 ? (
+          {sortedBarOrders.length === 0 ? (
             <div className="text-center py-12 bg-white rounded-lg shadow-lg">
               <p className="text-2xl text-gray-500">✨ Nessuna bevanda in attesa</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {barOrders.map(order => (
+              {sortedBarOrders.map(order => (
                 <div 
                   key={order.id} 
                   className={`p-6 rounded-lg shadow-lg ${
