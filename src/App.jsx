@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Trash2, Check, Clock, LogOut, Eye, EyeOff, DollarSign } from 'lucide-react';
 import { useDatabase } from './useDatabase';
 import { playSound } from './sounds';
+import React, { useState, useEffect, useRef } from 'react';
 
 export default function GestionaleRistorante() {
   const { menu: dbMenu, kitchenOrders: dbKitchenOrders, barOrders: dbBarOrders, loading, saveData } = useDatabase();
@@ -19,6 +20,9 @@ export default function GestionaleRistorante() {
   const [showMenu, setShowMenu] = useState(false);
   const [selectedTableForPayment, setSelectedTableForPayment] = useState(null);
 
+  const prevKitchenOrdersLength = useRef(0);
+const prevBarOrdersLength = useRef(0);
+
   useEffect(() => {
     setMenu(dbMenu);
   }, [dbMenu]);
@@ -30,6 +34,24 @@ export default function GestionaleRistorante() {
   useEffect(() => {
     setBarOrders(dbBarOrders);
   }, [dbBarOrders]);
+
+  useEffect(() => {
+  if (role === 'cucina') {
+    if (kitchenOrders.length > prevKitchenOrdersLength.current) {
+      playSound('newOrder');
+    }
+    prevKitchenOrdersLength.current = kitchenOrders.length;
+  }
+}, [kitchenOrders, role]);
+
+useEffect(() => {
+  if (role === 'bar') {
+    if (barOrders.length > prevBarOrdersLength.current) {
+      playSound('newOrder');
+    }
+    prevBarOrdersLength.current = barOrders.length;
+  }
+}, [barOrders, role]);
 
 useEffect(() => {
   if (role === 'cucina') {
@@ -151,7 +173,7 @@ useEffect(() => {
     );
     setKitchenOrders(newKitchenOrders);
     await saveData(menu, newKitchenOrders, barOrders);
-    if (newStatus === 'pronto') playSound('ready');
+   
   };
 
   const updateBarOrderStatus = async (orderId, newStatus) => {
@@ -160,7 +182,7 @@ useEffect(() => {
     );
     setBarOrders(newBarOrders);
     await saveData(menu, kitchenOrders, newBarOrders);
-    if (newStatus === 'pronto') playSound('ready');
+   
   };
 
   const removeFromOrder = (index) => {
