@@ -3,7 +3,7 @@ import { Plus, Trash2, Check, Clock, LogOut, Eye, EyeOff, DollarSign } from 'luc
 import { useDatabase } from './useDatabase';
 
 export default function GestionaleRistorante() {
-  const { menu: dbMenu, kitchenOrders: dbKitchenOrders, barOrders: dbBarOrders, loading, saveData } = useDatabase();
+  const { menu: dbMenu, kitchenOrders: dbKitchenOrders, barOrders: dbBarOrders, loading, error, saveData } = useDatabase();
   
   // Stati globali
   const [role, setRole] = useState(null);
