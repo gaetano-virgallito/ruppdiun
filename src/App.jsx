@@ -34,23 +34,9 @@ const [prevBarCount, setPrevBarCount] = useState(0);
     setBarOrders(dbBarOrders);
   }, [dbBarOrders]);
 
-  useEffect(() => {
-  if (role === 'cucina') {
-    if (kitchenOrders.length > prevKitchenOrdersLength.current) {
-      playSound('newOrder');
-    }
-    prevKitchenOrdersLength.current = kitchenOrders.length;
-  }
-}, [kitchenOrders, role]);
+ 
 
-useEffect(() => {
-  if (role === 'bar') {
-    if (barOrders.length > prevBarOrdersLength.current) {
-      playSound('newOrder');
-    }
-    prevBarOrdersLength.current = barOrders.length;
-  }
-}, [barOrders, role]);
+
 
 useEffect(() => {
   if (role === 'cucina' && kitchenOrders.length > 0) {
