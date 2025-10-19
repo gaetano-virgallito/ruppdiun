@@ -5,7 +5,8 @@ const MASTER_KEY = "$2a$10$grxqdSInpaAGhJAk2asU7OBXiq7Jf3GcyQdIO2hRP42tzOoYCPeai
 
 export function useDatabase() {
   const [menu, setMenu] = useState([]);
-  const [orders, setOrders] = useState([]);
+  const [kitchenOrders, setKitchenOrders] = useState([]);
+  const [barOrders, setBarOrders] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // Funzione per leggere i dati
@@ -16,7 +17,8 @@ export function useDatabase() {
       });
       const data = await response.json();
       setMenu(data.record.menu || []);
-      setOrders(data.record.orders || []);
+      setKitchenOrders(data.record.kitchenOrders || []);
+      setBarOrders(data.record.barOrders || []);
       setLoading(false);
     } catch (error) {
       console.error("Errore nel caricamento:", error);
@@ -32,13 +34,13 @@ export function useDatabase() {
   useEffect(() => {
     const interval = setInterval(() => {
       fetchData();
-    }, 2000); // Aggiorna ogni 2 secondi
+    }, 2000);
 
     return () => clearInterval(interval);
   }, []);
 
   // Salva i dati su JSON Bin
-  const saveData = async (newMenu, newOrders) => {
+  const saveData = async (newMenu, newKitchenOrders, newBarOrders) => {
     try {
       await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
         method: "PUT",
@@ -46,12 +48,16 @@ export function useDatabase() {
           "Content-Type": "application/json",
           "X-Master-Key": MASTER_KEY
         },
-        body: JSON.stringify({ menu: newMenu, orders: newOrders })
+        body: JSON.stringify({ 
+          menu: newMenu, 
+          kitchenOrders: newKitchenOrders,
+          barOrders: newBarOrders
+        })
       });
     } catch (error) {
       console.error("Errore nel salvataggio:", error);
     }
   };
 
-  return { menu, setMenu, orders, setOrders, loading, saveData };
+  return { menu, setMenu, kitchenOrders, setKitchenOrders, barOrders, setBarOrders, loading, saveData };
 }
