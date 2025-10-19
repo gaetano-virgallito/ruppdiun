@@ -11,7 +11,6 @@ export default function GestionaleRistorante() {
   const [barOrders, setBarOrders] = useState([]);
   const [tables, setTables] = useState(Array.from({length: 12}, (_, i) => ({ id: i+1, status: 'libero' })));
   const [hiddenDishes, setHiddenDishes] = useState([]);
-  const [heardOrderIds, setHeardOrderIds] = useState([]);
   
   const [newDish, setNewDish] = useState({ name: '', price: '', category: 'Antipasti', notes: '', allergens: '' });
   const [selectedTable, setSelectedTable] = useState(null);
@@ -19,8 +18,8 @@ export default function GestionaleRistorante() {
   const [showMenu, setShowMenu] = useState(false);
   const [selectedTableForPayment, setSelectedTableForPayment] = useState(null);
 
-const [prevKitchenCount, setPrevKitchenCount] = useState(0);
-const [prevBarCount, setPrevBarCount] = useState(0);
+  const prevKitchenCount = useRef(0);
+  const prevBarCount = useRef(0);
 
   useEffect(() => {
     setMenu(dbMenu);
@@ -34,34 +33,25 @@ const [prevBarCount, setPrevBarCount] = useState(0);
     setBarOrders(dbBarOrders);
   }, [dbBarOrders]);
 
- 
-
-
-
-useEffect(() => {
-  if (role === 'cucina' && kitchenOrders.length > 0) {
-    if (kitchenOrders.length > prevKitchenCount) {
-      const newOrders = kitchenOrders.filter(o => o.status === 'nuovo');
-      if (newOrders.length > 0) {
+  useEffect(() => {
+    if (role === 'cucina' && kitchenOrders.length > prevKitchenCount.current) {
+      const newOrdersCount = kitchenOrders.length - prevKitchenCount.current;
+      if (newOrdersCount > 0) {
         playSound('newOrder');
       }
-      setPrevKitchenCount(kitchenOrders.length);
     }
-  }
-}, [kitchenOrders, role, prevKitchenCount]);
+    prevKitchenCount.current = kitchenOrders.length;
+  }, [kitchenOrders, role]);
 
-useEffect(() => {
-  if (role === 'bar' && barOrders.length > 0) {
-    if (barOrders.length > prevBarCount) {
-      const newOrders = barOrders.filter(o => o.status === 'nuovo');
-      if (newOrders.length > 0) {
+  useEffect(() => {
+    if (role === 'bar' && barOrders.length > prevBarCount.current) {
+      const newOrdersCount = barOrders.length - prevBarCount.current;
+      if (newOrdersCount > 0) {
         playSound('newOrder');
       }
-      setPrevBarCount(barOrders.length);
     }
-  }
-}, [barOrders, role, prevBarCount]);
- 
+    prevBarCount.current = barOrders.length;
+  }, [barOrders, role]);
 
   const addDish = async () => {
     if (newDish.name && newDish.price) {
@@ -138,7 +128,7 @@ useEffect(() => {
       }
 
       setKitchenOrders(newKitchenOrders);
-      setBarOrders(newBarOrders);  
+      setBarOrders(newBarOrders);
       await saveData(menu, newKitchenOrders, newBarOrders);
       setCurrentOrderItems([]);
       setSelectedTable(null);
@@ -152,7 +142,6 @@ useEffect(() => {
     );
     setKitchenOrders(newKitchenOrders);
     await saveData(menu, newKitchenOrders, barOrders);
-   
   };
 
   const updateBarOrderStatus = async (orderId, newStatus) => {
@@ -161,7 +150,6 @@ useEffect(() => {
     );
     setBarOrders(newBarOrders);
     await saveData(menu, kitchenOrders, newBarOrders);
-   
   };
 
   const removeFromOrder = (index) => {
@@ -188,14 +176,6 @@ useEffect(() => {
     setKitchenOrders(newKitchenOrders);
     setBarOrders(newBarOrders);
     await saveData(menu, newKitchenOrders, newBarOrders);
-  };
-
-  const getTableKitchenOrders = (tableId) => {
-    return kitchenOrders.filter(o => o.tableId === tableId);
-  };
-
-  const getTableBarOrders = (tableId) => {
-    return barOrders.filter(o => o.tableId === tableId);
   };
 
   const getTableAllOrders = (tableId) => {
@@ -339,7 +319,7 @@ useEffect(() => {
                               </span>
                             </div>
                             
-                          <div className="bg-white p-3 rounded mb-3">
+                            <div className="bg-white p-3 rounded mb-3">
                               {order.items.map((item, idx) => (
                                 <div key={idx} className="flex justify-between text-sm mb-1">
                                   <span>{item.qty}x {item.name}</span>
@@ -548,8 +528,7 @@ useEffect(() => {
         <div className="max-w-6xl mx-auto">
           <div className="flex justify-between items-center mb-6">
             <h1 className="text-3xl font-bold text-red-900">👨‍🍳 Terminale Cucina</h1>
-            <button onClick={logout} className="flex items-center gap-2
-            bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition">
+            <button onClick={logout} className="flex items-center gap-2 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition">
               <LogOut size={18} /> Esci
             </button>
           </div>
@@ -684,3 +663,4 @@ useEffect(() => {
     </div>
   );
 }
+            
