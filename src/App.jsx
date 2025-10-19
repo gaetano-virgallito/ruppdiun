@@ -19,8 +19,8 @@ export default function GestionaleRistorante() {
   const [showMenu, setShowMenu] = useState(false);
   const [selectedTableForPayment, setSelectedTableForPayment] = useState(null);
 
-  const prevKitchenOrdersLength = useRef(0);
-const prevBarOrdersLength = useRef(0);
+const [prevKitchenCount, setPrevKitchenCount] = useState(0);
+const [prevBarCount, setPrevBarCount] = useState(0);
 
   useEffect(() => {
     setMenu(dbMenu);
@@ -53,34 +53,28 @@ useEffect(() => {
 }, [barOrders, role]);
 
 useEffect(() => {
-  if (role === 'cucina') {
-    kitchenOrders.forEach(order => {
-      if (order.status === 'nuovo') {
-        const soundedOrders = JSON.parse(localStorage.getItem('soundedKitchenOrders') || '[]');
-        if (!soundedOrders.includes(order.id)) {
-          playSound('newOrder');
-          soundedOrders.push(order.id);
-          localStorage.setItem('soundedKitchenOrders', JSON.stringify(soundedOrders));
-        }
+  if (role === 'cucina' && kitchenOrders.length > 0) {
+    if (kitchenOrders.length > prevKitchenCount) {
+      const newOrders = kitchenOrders.filter(o => o.status === 'nuovo');
+      if (newOrders.length > 0) {
+        playSound('newOrder');
       }
-    });
+      setPrevKitchenCount(kitchenOrders.length);
+    }
   }
-}, [kitchenOrders, role]);
+}, [kitchenOrders, role, prevKitchenCount]);
 
 useEffect(() => {
-  if (role === 'bar') {
-    barOrders.forEach(order => {
-      if (order.status === 'nuovo') {
-        const soundedOrders = JSON.parse(localStorage.getItem('soundedBarOrders') || '[]');
-        if (!soundedOrders.includes(order.id)) {
-          playSound('newOrder');
-          soundedOrders.push(order.id);
-          localStorage.setItem('soundedBarOrders', JSON.stringify(soundedOrders));
-        }
+  if (role === 'bar' && barOrders.length > 0) {
+    if (barOrders.length > prevBarCount) {
+      const newOrders = barOrders.filter(o => o.status === 'nuovo');
+      if (newOrders.length > 0) {
+        playSound('newOrder');
       }
-    });
+      setPrevBarCount(barOrders.length);
+    }
   }
-}, [barOrders, role]);
+}, [barOrders, role, prevBarCount]);
  
 
   const addDish = async () => {
