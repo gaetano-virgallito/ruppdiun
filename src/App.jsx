@@ -547,7 +547,7 @@ export default function GestionaleRistorante() {
                   <div className="flex gap-2">
                     {order.status === 'nuovo' && (
                       <button onClick={() => updateKitchenOrderStatus(order.id, 'in_preparazione')} className="flex-1 bg-yellow-500 text-white py-2 rounded-lg font-semibold hover:bg-yellow-600 transition flex items-center justify-center gap-2">
-                        <Clock size={18} /> In Prep
+                        <Clock size={18} /> IN PREP
                       </button>
                     )}
                     {order.status === 'in_preparazione' && (
@@ -605,7 +605,7 @@ export default function GestionaleRistorante() {
                   <div className="flex gap-2">
                     {order.status === 'nuovo' && (
                       <button onClick={() => updateBarOrderStatus(order.id, 'in_preparazione')} className="flex-1 bg-blue-500 text-white py-2 rounded-lg font-semibold hover:bg-blue-600 transition flex items-center justify-center gap-2">
-                        <Clock size={18} /> In Prep
+                        <Clock size={18} /> IN PREP
                       </button>
                     )}
                     {order.status === 'in_preparazione' && (
