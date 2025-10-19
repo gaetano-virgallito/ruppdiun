@@ -494,7 +494,7 @@ export default function GestionaleRistorante() {
                         <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-4 rounded-lg mt-4">
                           <div className="flex justify-between items-center">
                             <span className="text-lg font-semibold">Totale Tavolo:</span>
-                            <span className="text-2xl font-bold">€ {getTableAllOrders(selectedTable).reduce((sum, order) => sum + order.total, 0).toFixed(2)}</span>
+                            <span className="text-2xl font-bold">€ {getTableAllOrders(selectedTable).reduce((sum, order) => sum + order.items.reduce((itemSum, item) => itemSum + (item.price * item.qty), 0), 0).toFixed(2)}</span>
                           </div>
                         </div>
                       </>
