@@ -18,8 +18,8 @@ export default function GestionaleRistorante() {
   const [showMenu, setShowMenu] = useState(false);
   const [selectedTableForPayment, setSelectedTableForPayment] = useState(null);
 
-  const prevKitchenCount = useRef(0);
-  const prevBarCount = useRef(0);
+ const [lastKitchenOrderId, setLastKitchenOrderId] = useState(null);
+const [lastBarOrderId, setLastBarOrderId] = useState(null);
 
   useEffect(() => {
     setMenu(dbMenu);
@@ -34,24 +34,28 @@ export default function GestionaleRistorante() {
   }, [dbBarOrders]);
 
   useEffect(() => {
-    if (role === 'cucina' && kitchenOrders.length > prevKitchenCount.current) {
-      const newOrdersCount = kitchenOrders.length - prevKitchenCount.current;
-      if (newOrdersCount > 0) {
+  if (role === 'cucina' && kitchenOrders.length > 0) {
+    const lastOrder = kitchenOrders[kitchenOrders.length - 1];
+    if (lastOrder.id !== lastKitchenOrderId) {
+      setLastKitchenOrderId(lastOrder.id);
+      if (lastOrder.status === 'nuovo') {
         playSound('newOrder');
       }
     }
-    prevKitchenCount.current = kitchenOrders.length;
-  }, [kitchenOrders, role]);
+  }
+}, [kitchenOrders, role, lastKitchenOrderId]);
 
-  useEffect(() => {
-    if (role === 'bar' && barOrders.length > prevBarCount.current) {
-      const newOrdersCount = barOrders.length - prevBarCount.current;
-      if (newOrdersCount > 0) {
+useEffect(() => {
+  if (role === 'bar' && barOrders.length > 0) {
+    const lastOrder = barOrders[barOrders.length - 1];
+    if (lastOrder.id !== lastBarOrderId) {
+      setLastBarOrderId(lastOrder.id);
+      if (lastOrder.status === 'nuovo') {
         playSound('newOrder');
       }
     }
-    prevBarCount.current = barOrders.length;
-  }, [barOrders, role]);
+  }
+}, [barOrders, role, lastBarOrderId]);
 
   const addDish = async () => {
     if (newDish.name && newDish.price) {
