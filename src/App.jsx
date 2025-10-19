@@ -456,11 +456,53 @@ export default function GestionaleRistorante() {
                 )}
               </div>
 
-              {selectedTable && (
+             {selectedTable && (
                 <div className="bg-white rounded-lg shadow-lg p-6">
                   <h3 className="text-xl font-semibold text-gray-800 mb-4">Storico Ordini - Tavolo {selectedTable}</h3>
                   
                   <div className="space-y-3 max-h-96 overflow-y-auto">
+                    {getTableAllOrders(selectedTable).length === 0 ? (
+                      <p className="text-gray-500 text-center py-4">Nessun ordine in sospeso</p>
+                    ) : (
+                      <>
+                        {getTableAllOrders(selectedTable).map(order => (
+                          <div key={order.id} className={`border-l-4 p-3 rounded-lg text-sm ${
+                            order.status === 'nuovo' ? 'bg-red-50 border-red-500' :
+                            order.status === 'in_preparazione' ? 'bg-yellow-50 border-yellow-500' :
+                            'bg-green-50 border-green-500'
+                          }`}>
+                            <div className="flex justify-between items-start mb-2">
+                              <span className="text-xs text-gray-600">{order.timestamp}</span>
+                              <span className={`text-xs px-2 py-1 rounded font-semibold ${
+                                order.status === 'nuovo' ? 'bg-red-200 text-red-800' :
+                                order.status === 'in_preparazione' ? 'bg-yellow-200 text-yellow-800' :
+                                'bg-green-200 text-green-800'
+                              }`}>
+                                {order.status === 'nuovo' ? '🆕 Nuovo' : order.status === 'in_preparazione' ? '⏳ In Prep' : '✓ Pronto'}
+                              </span>
+                            </div>
+                            <div className="space-y-1">
+                              {order.items.map((item, idx) => (
+                                <div key={idx} className="flex justify-between text-xs">
+                                  <span>{item.qty}x {item.name}</span>
+                                  <span className="font-semibold">€ {(item.price * item.qty).toFixed(2)}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                        
+                        <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-4 rounded-lg mt-4">
+                          <div className="flex justify-between items-center">
+                            <span className="text-lg font-semibold">Totale Tavolo:</span>
+                            <span className="text-2xl font-bold">€ {getTableAllOrders(selectedTable).reduce((sum, order) => sum + order.total, 0).toFixed(2)}</span>
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
                     {getTableAllOrders(selectedTable).length === 0 ? (
                       <p className="text-gray-500 text-center py-4">Nessun ordine in sospeso</p>
                     ) : (
