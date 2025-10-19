@@ -556,7 +556,7 @@ export default function GestionaleRistorante() {
                       </button>
                     )}
                     {order.status === 'pronto' && (
-                      <div className="flex-1 bg-green-500 text-white py-2 rounded-lg font-semibold text-center">✓ Pronto</div>
+                      <div className="flex-1 bg-green-500 text-white py-2 rounded-lg font-semibold text-center">✓ Al Cameriere</div>
                     )}
                   </div>
                 </div>
