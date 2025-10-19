@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 
-const GITHUB_REPO = "gaetano-virgallito/gestionale-ristorante"; // Sostituisci con il tuo username/repo
-const GITHUB_TOKEN = ""; // Lo riempirai dopo
+const GITHUB_REPO = "gaetano-virgallito/gestionale-ristorante";
+const GITHUB_TOKEN = "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";
 const DB_FILE = "database.json";
 
 export function useDatabase() {
