@@ -477,7 +477,7 @@ export default function GestionaleRistorante() {
                                 order.status === 'in_preparazione' ? 'bg-yellow-200 text-yellow-800' :
                                 'bg-green-200 text-green-800'
                               }`}>
-                                {order.status === 'nuovo' ? '🆕 Nuovo' : order.status === 'in_preparazione' ? '⏳ In Prep' : '✓ Pronto'}
+                                {order.status === 'nuovo' ? '🆕 Nuovo' : order.status === 'in_preparazione' ? '⏳ IN PREP' : '✓ PRONTO'}
                               </span>
                             </div>
                             <div className="space-y-1">
@@ -556,7 +556,7 @@ export default function GestionaleRistorante() {
                       </button>
                     )}
                     {order.status === 'pronto' && (
-                      <div className="flex-1 bg-green-500 text-white py-2 rounded-lg font-semibold text-center">✓ Al Cameriere</div>
+                      <div className="flex-1 bg-green-500 text-white py-2 rounded-lg font-semibold text-center">✓ INVIATO</div>
                     )}
                   </div>
                 </div>
