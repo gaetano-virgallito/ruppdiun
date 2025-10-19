@@ -32,22 +32,26 @@ export default function GestionaleRistorante() {
   }, [dbBarOrders]);
 
   useEffect(() => {
-  if (role === 'cucina' && kitchenOrders.length > 0) {
-    const hasNewOrder = kitchenOrders.some(o => o.status === 'nuovo');
-    if (hasNewOrder) {
-      playSound('newOrder');
-    }
+  if (role === 'cucina') {
+    kitchenOrders.forEach(order => {
+      if (order.status === 'nuovo' && !heardOrderIds.includes(order.id)) {
+        playSound('newOrder');
+        setHeardOrderIds(prev => [...prev, order.id]);
+      }
+    });
   }
-}, [kitchenOrders, role]);
+}, [kitchenOrders, role, heardOrderIds]);
 
 useEffect(() => {
-  if (role === 'bar' && barOrders.length > 0) {
-    const hasNewOrder = barOrders.some(o => o.status === 'nuovo');
-    if (hasNewOrder) {
-      playSound('newOrder');
-    }
+  if (role === 'bar') {
+    barOrders.forEach(order => {
+      if (order.status === 'nuovo' && !heardOrderIds.includes(order.id)) {
+        playSound('newOrder');
+        setHeardOrderIds(prev => [...prev, order.id]);
+      }
+    });
   }
-}, [barOrders, role]);
+}, [barOrders, role, heardOrderIds]);
  
 
   const addDish = async () => {
