@@ -135,6 +135,8 @@ useEffect(() => {
 
       setKitchenOrders(newKitchenOrders);
       setBarOrders(newBarOrders);
+      if (kitchenItems.length > 0) playSound('newOrder');
+      if (barItems.length > 0) playSound('newOrder');
       await saveData(menu, newKitchenOrders, newBarOrders);
       setCurrentOrderItems([]);
       setSelectedTable(null);
