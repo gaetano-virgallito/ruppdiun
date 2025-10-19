@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 
 const GITHUB_REPO = "gaetano-virgallito/ruppdiun";
-const GITHUB_TOKEN = "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";
+const GITHUB_TOKEN = "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";
 const DB_FILE = "database.json";
 
 export function useDatabase() {
