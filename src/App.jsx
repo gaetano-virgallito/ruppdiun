@@ -120,6 +120,7 @@ export default function GestionaleRistorante() {
       let newKitchenOrders = kitchenOrders;
       let newBarOrders = barOrders;
 
+      // Cucina: stato "in_attesa" - richiede approvazione cameriere
       if (kitchenItems.length > 0) {
         newKitchenOrders = [...kitchenOrders, {
           id: orderId + '-k',
@@ -131,12 +132,13 @@ export default function GestionaleRistorante() {
         }];
       }
 
+      // Bar: stato "nuovo" - preparazione immediata
       if (barItems.length > 0) {
         newBarOrders = [...barOrders, {
           id: orderId + '-b',
           tableId: selectedTable,
           items: barItems,
-          status: 'in_attesa',
+          status: 'nuovo',
           timestamp,
           total: barItems.reduce((sum, item) => sum + item.price * item.qty, 0)
         }];
@@ -174,14 +176,6 @@ export default function GestionaleRistorante() {
     );
     setKitchenOrders(newKitchenOrders);
     await saveData(menu, newKitchenOrders, barOrders);
-  };
-
-  const approveBarOrder = async (orderId) => {
-    const newBarOrders = barOrders.map(order =>
-      order.id === orderId ? { ...order, status: 'nuovo' } : order
-    );
-    setBarOrders(newBarOrders);
-    await saveData(menu, kitchenOrders, newBarOrders);
   };
 
   const markAsPaid = async (tableId) => {
@@ -655,18 +649,13 @@ export default function GestionaleRistorante() {
                                 </div>
                               ))}
                             </div>
-                            {order.status === 'in_attesa' && (
+                            {/* Bottone "Da Preparare" SOLO per ordini cucina */}
+                            {order.status === 'in_attesa' && order.id.endsWith('-k') && (
                               <button
-                                onClick={() => {
-                                  if (order.id.endsWith('-k')) {
-                                    approveKitchenOrder(order.id);
-                                  } else {
-                                    approveBarOrder(order.id);
-                                  }
-                                }}
+                                onClick={() => approveKitchenOrder(order.id)}
                                 className="w-full bg-blue-500 text-white py-2 px-3 rounded font-semibold hover:bg-blue-600 transition text-xs flex items-center justify-center gap-1"
                               >
-                                ▶️ Da Preparare
+                                ▶️ Da Preparare (Cucina)
                               </button>
                             )}
                           </div>
@@ -796,7 +785,6 @@ export default function GestionaleRistorante() {
                 <div 
                   key={order.id} 
                   className={`p-6 rounded-lg shadow-lg ${
-                    order.status === 'in_attesa' ? 'bg-gray-100 border-4 border-gray-400' :
                     order.status === 'nuovo' ? 'bg-cyan-100 border-4 border-cyan-500' : 
                     order.status === 'in_preparazione' ? 'bg-blue-100 border-4 border-blue-500' : 
                     'bg-green-100 border-4 border-green-500'
@@ -817,11 +805,6 @@ export default function GestionaleRistorante() {
                   </div>
 
                   <div className="flex gap-2">
-                    {order.status === 'in_attesa' && (
-                      <div className="flex-1 bg-gray-400 text-white py-2 rounded-lg font-semibold text-center">
-                        ⏸️ In Attesa Cameriere
-                      </div>
-                    )}
                     {order.status === 'nuovo' && (
                       <button 
                         onClick={() => updateBarOrderStatus(order.id, 'in_preparazione')} 
