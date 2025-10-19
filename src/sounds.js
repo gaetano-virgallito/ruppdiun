@@ -1,36 +1,41 @@
 export const playSound = (type) => {
-  const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-  
-  if (type === 'newOrder') {
-    // Suono per nuovo ordine (ding ding)
-    const osc = audioContext.createOscillator();
-    const gain = audioContext.createGain();
-    osc.connect(gain);
-    gain.connect(audioContext.destination);
+  try {
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const now = audioContext.currentTime;
     
-    osc.frequency.value = 800;
-    gain.gain.setValueAtTime(0.3, audioContext.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
-    
-    osc.start(audioContext.currentTime);
-    osc.stop(audioContext.currentTime + 0.3);
-  } 
-  else if (type === 'ready') {
-    // Suono per ordine pronto (beep beep)
-    const osc = audioContext.createOscillator();
-    const gain = audioContext.createGain();
-    osc.connect(gain);
-    gain.connect(audioContext.destination);
-    
-    osc.frequency.value = 1000;
-    gain.gain.setValueAtTime(0.3, audioContext.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
-    
-    osc.start(audioContext.currentTime);
-    osc.stop(audioContext.currentTime + 0.2);
-    
-    osc.frequency.value = 1200;
-    osc.start(audioContext.currentTime + 0.25);
-    osc.stop(audioContext.currentTime + 0.45);
+    if (type === 'newOrder') {
+      // Due bip per nuovo ordine
+      [800, 600].forEach((freq, i) => {
+        const osc = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+        osc.connect(gain);
+        gain.connect(audioContext.destination);
+        
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.3, now + i * 0.15);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + i * 0.15 + 0.15);
+        
+        osc.start(now + i * 0.15);
+        osc.stop(now + i * 0.15 + 0.15);
+      });
+    } 
+    else if (type === 'ready') {
+      // Tre bip per ordine pronto
+      [1000, 1200, 1000].forEach((freq, i) => {
+        const osc = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+        osc.connect(gain);
+        gain.connect(audioContext.destination);
+        
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.3, now + i * 0.1);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + i * 0.1 + 0.1);
+        
+        osc.start(now + i * 0.1);
+        osc.stop(now + i * 0.1 + 0.1);
+      });
+    }
+  } catch (error) {
+    console.log('Suono non disponibile');
   }
 };
