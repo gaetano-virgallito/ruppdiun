@@ -8,22 +8,33 @@ export function useDatabase() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Leggi i dati da JSON Bin
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const response = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
-          headers: { "X-Master-Key": MASTER_KEY }
-        });
-        const data = await response.json();
-        setMenu(data.record.menu || []);
-        setOrders(data.record.orders || []);
-      } catch (error) {
-        console.error("Errore nel caricamento:", error);
-      }
+  // Funzione per leggere i dati
+  const fetchData = async () => {
+    try {
+      const response = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
+        headers: { "X-Master-Key": MASTER_KEY }
+      });
+      const data = await response.json();
+      setMenu(data.record.menu || []);
+      setOrders(data.record.orders || []);
       setLoading(false);
-    };
+    } catch (error) {
+      console.error("Errore nel caricamento:", error);
+    }
+  };
+
+  // Carica i dati al primo caricamento
+  useEffect(() => {
     fetchData();
+  }, []);
+
+  // Polling automatico ogni 2 secondi
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchData();
+    }, 2000); // Aggiorna ogni 2 secondi
+
+    return () => clearInterval(interval);
   }, []);
 
   // Salva i dati su JSON Bin
