@@ -31,27 +31,35 @@ export default function GestionaleRistorante() {
     setBarOrders(dbBarOrders);
   }, [dbBarOrders]);
 
-  useEffect(() => {
+useEffect(() => {
   if (role === 'cucina') {
     kitchenOrders.forEach(order => {
-      if (order.status === 'nuovo' && !heardOrderIds.includes(order.id)) {
-        playSound('newOrder');
-        setHeardOrderIds(prev => [...prev, order.id]);
+      if (order.status === 'nuovo') {
+        const soundedOrders = JSON.parse(localStorage.getItem('soundedKitchenOrders') || '[]');
+        if (!soundedOrders.includes(order.id)) {
+          playSound('newOrder');
+          soundedOrders.push(order.id);
+          localStorage.setItem('soundedKitchenOrders', JSON.stringify(soundedOrders));
+        }
       }
     });
   }
-}, [kitchenOrders, role, heardOrderIds]);
+}, [kitchenOrders, role]);
 
 useEffect(() => {
   if (role === 'bar') {
     barOrders.forEach(order => {
-      if (order.status === 'nuovo' && !heardOrderIds.includes(order.id)) {
-        playSound('newOrder');
-        setHeardOrderIds(prev => [...prev, order.id]);
+      if (order.status === 'nuovo') {
+        const soundedOrders = JSON.parse(localStorage.getItem('soundedBarOrders') || '[]');
+        if (!soundedOrders.includes(order.id)) {
+          playSound('newOrder');
+          soundedOrders.push(order.id);
+          localStorage.setItem('soundedBarOrders', JSON.stringify(soundedOrders));
+        }
       }
     });
   }
-}, [barOrders, role, heardOrderIds]);
+}, [barOrders, role]);
  
 
   const addDish = async () => {
