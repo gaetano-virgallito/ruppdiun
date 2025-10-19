@@ -31,55 +31,32 @@ export default function GestionaleRistorante() {
     setBarOrders(dbBarOrders);
   }, [dbBarOrders]);
 
-  useEffect(() => {
-  if (role === 'cucina' && kitchenOrders.length > 0) {
-    const lastOrder = kitchenOrders[kitchenOrders.length - 1];
-    if (lastOrder.status === 'nuovo') {
-      setTimeout(() => playSound('newOrder'), 500);
-    }
-  }
-}, [kitchenOrders.length, role]);
+  const [lastKitchenOrderCount, setLastKitchenOrderCount] = useState(0);
+const [lastBarOrderCount, setLastBarOrderCount] = useState(0);
 
 useEffect(() => {
-  if (role === 'bar' && barOrders.length > 0) {
-    const lastOrder = barOrders[barOrders.length - 1];
-    if (lastOrder.status === 'nuovo') {
-      setTimeout(() => playSound('newOrder'), 500);
-    }
-  }
-}, [barOrders.length, role]);
-
-useEffect(() => {
-  if (role === 'cameriere') {
-    const allOrders = [...kitchenOrders, ...barOrders];
-    allOrders.forEach(order => {
-      if (order.status === 'pronto') {
-        playSound('ready');
-      }
-    });
-  }
-}, [kitchenOrders, barOrders, role]);
-  useEffect(() => {
-  if (role === 'cucina') {
-    kitchenOrders.forEach(order => {
-      if (order.status === 'nuovo' && !heardOrderIds.includes(order.id)) {
+  if (role === 'cucina' && kitchenOrders.length > lastKitchenOrderCount) {
+    const newOrders = kitchenOrders.slice(lastKitchenOrderCount);
+    newOrders.forEach(order => {
+      if (order.status === 'nuovo') {
         playSound('newOrder');
-        setHeardOrderIds([...heardOrderIds, order.id]);
       }
     });
+    setLastKitchenOrderCount(kitchenOrders.length);
   }
-}, [kitchenOrders, role]);
+}, [kitchenOrders, role, lastKitchenOrderCount]);
 
 useEffect(() => {
-  if (role === 'bar') {
-    barOrders.forEach(order => {
-      if (order.status === 'nuovo' && !heardOrderIds.includes(order.id)) {
+  if (role === 'bar' && barOrders.length > lastBarOrderCount) {
+    const newOrders = barOrders.slice(lastBarOrderCount);
+    newOrders.forEach(order => {
+      if (order.status === 'nuovo') {
         playSound('newOrder');
-        setHeardOrderIds([...heardOrderIds, order.id]);
       }
     });
+    setLastBarOrderCount(barOrders.length);
   }
-}, [barOrders, role]);
+}, [barOrders, role, lastBarOrderCount]);
 
   const addDish = async () => {
     if (newDish.name && newDish.price) {
