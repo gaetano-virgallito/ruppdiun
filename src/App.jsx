@@ -31,32 +31,24 @@ export default function GestionaleRistorante() {
     setBarOrders(dbBarOrders);
   }, [dbBarOrders]);
 
-  const [lastKitchenOrderCount, setLastKitchenOrderCount] = useState(0);
-const [lastBarOrderCount, setLastBarOrderCount] = useState(0);
+  useEffect(() => {
+  if (role === 'cucina' && kitchenOrders.length > 0) {
+    const hasNewOrder = kitchenOrders.some(o => o.status === 'nuovo');
+    if (hasNewOrder) {
+      playSound('newOrder');
+    }
+  }
+}, [kitchenOrders, role]);
 
 useEffect(() => {
-  if (role === 'cucina' && kitchenOrders.length > lastKitchenOrderCount) {
-    const newOrders = kitchenOrders.slice(lastKitchenOrderCount);
-    newOrders.forEach(order => {
-      if (order.status === 'nuovo') {
-        playSound('newOrder');
-      }
-    });
-    setLastKitchenOrderCount(kitchenOrders.length);
+  if (role === 'bar' && barOrders.length > 0) {
+    const hasNewOrder = barOrders.some(o => o.status === 'nuovo');
+    if (hasNewOrder) {
+      playSound('newOrder');
+    }
   }
-}, [kitchenOrders, role, lastKitchenOrderCount]);
-
-useEffect(() => {
-  if (role === 'bar' && barOrders.length > lastBarOrderCount) {
-    const newOrders = barOrders.slice(lastBarOrderCount);
-    newOrders.forEach(order => {
-      if (order.status === 'nuovo') {
-        playSound('newOrder');
-      }
-    });
-    setLastBarOrderCount(barOrders.length);
-  }
-}, [barOrders, role, lastBarOrderCount]);
+}, [barOrders, role]);
+ 
 
   const addDish = async () => {
     if (newDish.name && newDish.price) {
@@ -133,9 +125,7 @@ useEffect(() => {
       }
 
       setKitchenOrders(newKitchenOrders);
-      setBarOrders(newBarOrders);
-      if (kitchenItems.length > 0) playSound('newOrder');
-      if (barItems.length > 0) playSound('newOrder');
+      setBarOrders(newBarOrders);  
       await saveData(menu, newKitchenOrders, newBarOrders);
       setCurrentOrderItems([]);
       setSelectedTable(null);
