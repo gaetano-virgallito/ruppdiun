@@ -552,7 +552,7 @@ export default function GestionaleRistorante() {
                     )}
                     {order.status === 'in_preparazione' && (
                       <button onClick={() => updateKitchenOrderStatus(order.id, 'pronto')} className="flex-1 bg-green-500 text-white py-2 rounded-lg font-semibold hover:bg-green-600 transition flex items-center justify-center gap-2">
-                        <Check size={18} /> Pronto!
+                        <Check size={18} /> PRONTO!
                       </button>
                     )}
                     {order.status === 'pronto' && (
@@ -610,11 +610,11 @@ export default function GestionaleRistorante() {
                     )}
                     {order.status === 'in_preparazione' && (
                       <button onClick={() => updateBarOrderStatus(order.id, 'pronto')} className="flex-1 bg-green-500 text-white py-2 rounded-lg font-semibold hover:bg-green-600 transition flex items-center justify-center gap-2">
-                        <Check size={18} /> Pronto!
+                        <Check size={18} /> PRONTO!
                       </button>
                     )}
                     {order.status === 'pronto' && (
-                      <div className="flex-1 bg-green-500 text-white py-2 rounded-lg font-semibold text-center">✓ Pronto</div>
+                      <div className="flex-1 bg-green-500 text-white py-2 rounded-lg font-semibold text-center">✓ PRONTO</div>
                     )}
                   </div>
                 </div>
