@@ -125,7 +125,7 @@ export default function GestionaleRistorante() {
           id: orderId + '-k',
           tableId: selectedTable,
           items: kitchenItems,
-          status: 'nuovo',
+          status: 'in_attesa',
           timestamp,
           total: kitchenItems.reduce((sum, item) => sum + item.price * item.qty, 0)
         }];
@@ -136,7 +136,7 @@ export default function GestionaleRistorante() {
           id: orderId + '-b',
           tableId: selectedTable,
           items: barItems,
-          status: 'nuovo',
+          status: 'in_attesa',
           timestamp,
           total: barItems.reduce((sum, item) => sum + item.price * item.qty, 0)
         }];
@@ -163,6 +163,22 @@ export default function GestionaleRistorante() {
   const updateBarOrderStatus = async (orderId, newStatus) => {
     const newBarOrders = barOrders.map(order =>
       order.id === orderId ? { ...order, status: newStatus } : order
+    );
+    setBarOrders(newBarOrders);
+    await saveData(menu, kitchenOrders, newBarOrders);
+  };
+
+  const approveKitchenOrder = async (orderId) => {
+    const newKitchenOrders = kitchenOrders.map(order =>
+      order.id === orderId ? { ...order, status: 'nuovo' } : order
+    );
+    setKitchenOrders(newKitchenOrders);
+    await saveData(menu, newKitchenOrders, barOrders);
+  };
+
+  const approveBarOrder = async (orderId) => {
+    const newBarOrders = barOrders.map(order =>
+      order.id === orderId ? { ...order, status: 'nuovo' } : order
     );
     setBarOrders(newBarOrders);
     await saveData(menu, kitchenOrders, newBarOrders);
@@ -365,6 +381,7 @@ export default function GestionaleRistorante() {
                           <div 
                             key={order.id} 
                             className={`border-l-4 p-4 rounded-lg ${
+                              order.status === 'in_attesa' ? 'bg-gray-50 border-gray-400' :
                               order.status === 'nuovo' ? 'bg-red-50 border-red-500' :
                               order.status === 'in_preparazione' ? 'bg-yellow-50 border-yellow-500' :
                               'bg-green-50 border-green-500'
@@ -373,11 +390,15 @@ export default function GestionaleRistorante() {
                             <div className="flex justify-between items-start mb-2">
                               <span className="text-sm text-gray-600">{order.timestamp}</span>
                               <span className={`text-xs px-2 py-1 rounded ${
+                                order.status === 'in_attesa' ? 'bg-gray-200 text-gray-800' :
                                 order.status === 'nuovo' ? 'bg-red-200 text-red-800' :
                                 order.status === 'in_preparazione' ? 'bg-yellow-200 text-yellow-800' :
                                 'bg-green-200 text-green-800'
                               }`}>
-                                {order.status === 'nuovo' ? 'Nuovo' : order.status === 'in_preparazione' ? 'In Preparazione' : 'Pronto'}
+                                {order.status === 'in_attesa' ? 'In Attesa' :
+                                 order.status === 'nuovo' ? 'Nuovo' : 
+                                 order.status === 'in_preparazione' ? 'In Preparazione' : 
+                                 'Pronto'}
                               </span>
                             </div>
                             
@@ -606,6 +627,7 @@ export default function GestionaleRistorante() {
                           <div 
                             key={order.id} 
                             className={`border-l-4 p-3 rounded-lg text-sm ${
+                              order.status === 'in_attesa' ? 'bg-gray-50 border-gray-400' :
                               order.status === 'nuovo' ? 'bg-red-50 border-red-500' :
                               order.status === 'in_preparazione' ? 'bg-yellow-50 border-yellow-500' :
                               'bg-green-50 border-green-500'
@@ -614,14 +636,18 @@ export default function GestionaleRistorante() {
                             <div className="flex justify-between items-start mb-2">
                               <span className="text-xs text-gray-600">{order.timestamp}</span>
                               <span className={`text-xs px-2 py-1 rounded font-semibold ${
+                                order.status === 'in_attesa' ? 'bg-gray-200 text-gray-800' :
                                 order.status === 'nuovo' ? 'bg-red-200 text-red-800' :
                                 order.status === 'in_preparazione' ? 'bg-yellow-200 text-yellow-800' :
                                 'bg-green-200 text-green-800'
                               }`}>
-                                {order.status === 'nuovo' ? '🆕 Nuovo' : order.status === 'in_preparazione' ? '⏳ In Prep' : '✓ Pronto'}
+                                {order.status === 'in_attesa' ? '⏸️ In Attesa' : 
+                                 order.status === 'nuovo' ? '🆕 Nuovo' : 
+                                 order.status === 'in_preparazione' ? '⏳ In Prep' : 
+                                 '✓ Pronto'}
                               </span>
                             </div>
-                            <div className="space-y-1">
+                            <div className="space-y-1 mb-2">
                               {order.items.map((item, idx) => (
                                 <div key={idx} className="flex justify-between text-xs">
                                   <span>{item.qty}x {item.name}</span>
@@ -629,6 +655,20 @@ export default function GestionaleRistorante() {
                                 </div>
                               ))}
                             </div>
+                            {order.status === 'in_attesa' && (
+                              <button
+                                onClick={() => {
+                                  if (order.id.endsWith('-k')) {
+                                    approveKitchenOrder(order.id);
+                                  } else {
+                                    approveBarOrder(order.id);
+                                  }
+                                }}
+                                className="w-full bg-blue-500 text-white py-2 px-3 rounded font-semibold hover:bg-blue-600 transition text-xs flex items-center justify-center gap-1"
+                              >
+                                ▶️ Da Preparare
+                              </button>
+                            )}
                           </div>
                         ))}
                         
@@ -676,6 +716,7 @@ export default function GestionaleRistorante() {
                 <div 
                   key={order.id} 
                   className={`p-6 rounded-lg shadow-lg ${
+                    order.status === 'in_attesa' ? 'bg-gray-100 border-4 border-gray-400' :
                     order.status === 'nuovo' ? 'bg-red-100 border-4 border-red-500' : 
                     order.status === 'in_preparazione' ? 'bg-yellow-100 border-4 border-yellow-500' : 
                     'bg-green-100 border-4 border-green-500'
@@ -696,6 +737,11 @@ export default function GestionaleRistorante() {
                   </div>
 
                   <div className="flex gap-2">
+                    {order.status === 'in_attesa' && (
+                      <div className="flex-1 bg-gray-400 text-white py-2 rounded-lg font-semibold text-center">
+                        ⏸️ In Attesa Cameriere
+                      </div>
+                    )}
                     {order.status === 'nuovo' && (
                       <button 
                         onClick={() => updateKitchenOrderStatus(order.id, 'in_preparazione')} 
@@ -750,6 +796,7 @@ export default function GestionaleRistorante() {
                 <div 
                   key={order.id} 
                   className={`p-6 rounded-lg shadow-lg ${
+                    order.status === 'in_attesa' ? 'bg-gray-100 border-4 border-gray-400' :
                     order.status === 'nuovo' ? 'bg-cyan-100 border-4 border-cyan-500' : 
                     order.status === 'in_preparazione' ? 'bg-blue-100 border-4 border-blue-500' : 
                     'bg-green-100 border-4 border-green-500'
@@ -770,6 +817,11 @@ export default function GestionaleRistorante() {
                   </div>
 
                   <div className="flex gap-2">
+                    {order.status === 'in_attesa' && (
+                      <div className="flex-1 bg-gray-400 text-white py-2 rounded-lg font-semibold text-center">
+                        ⏸️ In Attesa Cameriere
+                      </div>
+                    )}
                     {order.status === 'nuovo' && (
                       <button 
                         onClick={() => updateBarOrderStatus(order.id, 'in_preparazione')} 
