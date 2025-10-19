@@ -303,17 +303,13 @@ export default function GestionaleRistorante() {
                               </span>
                             </div>
                             
-                            <div className="bg-white p-3 rounded mb-3">
+                          <div className="bg-white p-3 rounded mb-3">
                               {order.items.map((item, idx) => (
                                 <div key={idx} className="flex justify-between text-sm mb-1">
                                   <span>{item.qty}x {item.name}</span>
                                   <span className="font-semibold">€ {(item.price * item.qty).toFixed(2)}</span>
                                 </div>
                               ))}
-                              <div className="border-t pt-2 mt-2 flex justify-between font-bold">
-                                <span>Subtotale:</span>
-                                <span>€ {order.total.toFixed(2)}</span>
-                              </div>
                             </div>
                           </div>
                         ))}
