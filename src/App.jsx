@@ -617,25 +617,34 @@ export default function GestionaleRistorante() {
                       <p className="text-gray-500 text-center py-4">Nessun ordine in sospeso</p>
                     ) : (
                       <>
-                        {getTableAllOrders(selectedTable).map(order => (
+                        {getTableAllOrders(selectedTable).map(order => {
+                          // Identifica se è ordine cucina o bar
+                          const isKitchenOrder = order.id.endsWith('-k');
+                          const isBarOrder = order.id.endsWith('-b');
+                          
+                          return (
                           <div 
                             key={order.id} 
                             className={`border-l-4 p-3 rounded-lg text-sm ${
-                              order.status === 'in_attesa' ? 'bg-gray-50 border-gray-400' :
+                              order.status === 'in_attesa' && isKitchenOrder ? 'bg-gray-50 border-gray-400' :
                               order.status === 'nuovo' ? 'bg-red-50 border-red-500' :
                               order.status === 'in_preparazione' ? 'bg-yellow-50 border-yellow-500' :
                               'bg-green-50 border-green-500'
                             }`}
                           >
                             <div className="flex justify-between items-start mb-2">
-                              <span className="text-xs text-gray-600">{order.timestamp}</span>
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs text-gray-600">{order.timestamp}</span>
+                                {isBarOrder && <span className="text-xs bg-cyan-200 text-cyan-800 px-1 rounded">🍹</span>}
+                                {isKitchenOrder && <span className="text-xs bg-red-200 text-red-800 px-1 rounded">🍽️</span>}
+                              </div>
                               <span className={`text-xs px-2 py-1 rounded font-semibold ${
-                                order.status === 'in_attesa' ? 'bg-gray-200 text-gray-800' :
+                                order.status === 'in_attesa' && isKitchenOrder ? 'bg-gray-200 text-gray-800' :
                                 order.status === 'nuovo' ? 'bg-red-200 text-red-800' :
                                 order.status === 'in_preparazione' ? 'bg-yellow-200 text-yellow-800' :
                                 'bg-green-200 text-green-800'
                               }`}>
-                                {order.status === 'in_attesa' ? '⏸️ In Attesa' : 
+                                {order.status === 'in_attesa' && isKitchenOrder ? '⏸️ In Attesa' : 
                                  order.status === 'nuovo' ? '🆕 Nuovo' : 
                                  order.status === 'in_preparazione' ? '⏳ In Prep' : 
                                  '✓ Pronto'}
@@ -649,17 +658,18 @@ export default function GestionaleRistorante() {
                                 </div>
                               ))}
                             </div>
-                            {/* Bottone "Da Preparare" SOLO per ordini cucina */}
-                            {order.status === 'in_attesa' && order.id.endsWith('-k') && (
+                            {/* Bottone "Da Preparare" SOLO per ordini CUCINA in attesa */}
+                            {order.status === 'in_attesa' && isKitchenOrder && (
                               <button
                                 onClick={() => approveKitchenOrder(order.id)}
                                 className="w-full bg-blue-500 text-white py-2 px-3 rounded font-semibold hover:bg-blue-600 transition text-xs flex items-center justify-center gap-1"
                               >
-                                ▶️ Da Preparare (Cucina)
+                                ▶️ Da Preparare
                               </button>
                             )}
                           </div>
-                        ))}
+                        );
+                        })}
                         
                         {/* Totale Finale */}
                         <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-4 rounded-lg mt-4">
