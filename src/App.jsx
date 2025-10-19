@@ -3,12 +3,12 @@ import { Plus, Trash2, Check, Clock, LogOut, Eye, EyeOff, DollarSign } from 'luc
 import { useDatabase } from './useDatabase';
 
 export default function GestionaleRistorante() {
-  const { menu: dbMenu, orders: dbOrders, loading, saveData } = useDatabase();
+  const { menu: dbMenu, kitchenOrders: dbKitchenOrders, barOrders: dbBarOrders, loading, saveData } = useDatabase();
   const [role, setRole] = useState(null);
   const [menu, setMenu] = useState([]);
-  const [orders, setOrders] = useState([]);
+  const [kitchenOrders, setKitchenOrders] = useState([]);
+  const [barOrders, setBarOrders] = useState([]);
   const [tables, setTables] = useState(Array.from({length: 12}, (_, i) => ({ id: i+1, status: 'libero' })));
-  const [completedOrders, setCompletedOrders] = useState([]);
   const [hiddenDishes, setHiddenDishes] = useState([]);
   
   const [newDish, setNewDish] = useState({ name: '', price: '', category: 'Antipasti', notes: '', allergens: '' });
@@ -17,17 +17,18 @@ export default function GestionaleRistorante() {
   const [showMenu, setShowMenu] = useState(false);
   const [selectedTableForPayment, setSelectedTableForPayment] = useState(null);
 
-  // Carica dati da GitHub
   useEffect(() => {
     setMenu(dbMenu);
   }, [dbMenu]);
 
   useEffect(() => {
-    setOrders(dbOrders.filter(o => !o.paid));
-    setCompletedOrders(dbOrders.filter(o => o.paid));
-  }, [dbOrders]);
+    setKitchenOrders(dbKitchenOrders);
+  }, [dbKitchenOrders]);
 
-  // Aggiungi piatto al menu
+  useEffect(() => {
+    setBarOrders(dbBarOrders);
+  }, [dbBarOrders]);
+
   const addDish = async () => {
     if (newDish.name && newDish.price) {
       const newMenu = [...menu, { 
@@ -39,27 +40,23 @@ export default function GestionaleRistorante() {
         allergens: newDish.allergens
       }];
       setMenu(newMenu);
-      await saveData(newMenu, orders);
+      await saveData(newMenu, kitchenOrders, barOrders);
       setNewDish({ name: '', price: '', category: 'Antipasti', notes: '', allergens: '' });
     }
   };
 
-  // Rimuovi piatto dal menu
   const removeDish = async (id) => {
     const newMenu = menu.filter(d => d.id !== id);
     setMenu(newMenu);
-    await saveData(newMenu, orders);
-    setHiddenDishes(hiddenDishes.filter(hd => hd !== id));
+    await saveData(newMenu, kitchenOrders, barOrders);
   };
 
-  // Nascondi/Mostra piatto
   const toggleHideDish = (id) => {
     setHiddenDishes(prev => 
       prev.includes(id) ? prev.filter(hd => hd !== id) : [...prev, id]
     );
   };
 
-  // Aggiungi piatto all'ordine corrente
   const addToOrder = (dish) => {
     const existing = currentOrderItems.find(item => item.dishId === dish.id);
     if (existing) {
@@ -71,7 +68,6 @@ export default function GestionaleRistorante() {
     }
   };
 
-  // Salva ordine
   const saveOrder = async () => {
     if (selectedTable && currentOrderItems.length > 0) {
       const newOrder = {
@@ -83,30 +79,60 @@ export default function GestionaleRistorante() {
         total: currentOrderItems.reduce((sum, item) => sum + item.price * item.qty, 0),
         paid: false
       };
-      const newOrders = [...orders, newOrder];
-      setOrders(newOrders);
-      await saveData(menu, newOrders);
+
+      // Separa ordini cucina e bar
+      const kitchenItems = currentOrderItems.filter(item => {
+        const dish = menu.find(d => d.id === item.dishId);
+        return dish && dish.category !== 'Bevande';
+      });
+      
+      const barItems = currentOrderItems.filter(item => {
+        const dish = menu.find(d => d.id === item.dishId);
+        return dish && dish.category === 'Bevande';
+      });
+
+      let newKitchenOrders = kitchenOrders;
+      let newBarOrders = barOrders;
+
+      if (kitchenItems.length > 0) {
+        const kitchenOrder = { ...newOrder, items: kitchenItems };
+        newKitchenOrders = [...kitchenOrders, kitchenOrder];
+      }
+
+      if (barItems.length > 0) {
+        const barOrder = { ...newOrder, items: barItems };
+        newBarOrders = [...barOrders, barOrder];
+      }
+
+      setKitchenOrders(newKitchenOrders);
+      setBarOrders(newBarOrders);
+      await saveData(menu, newKitchenOrders, newBarOrders);
       setCurrentOrderItems([]);
       setSelectedTable(null);
       setShowMenu(false);
     }
   };
 
-  // Aggiorna stato ordine
-  const updateOrderStatus = async (orderId, newStatus) => {
-    const newOrders = orders.map(order =>
+  const updateKitchenOrderStatus = async (orderId, newStatus) => {
+    const newKitchenOrders = kitchenOrders.map(order =>
       order.id === orderId ? { ...order, status: newStatus } : order
     );
-    setOrders(newOrders);
-    await saveData(menu, newOrders);
+    setKitchenOrders(newKitchenOrders);
+    await saveData(menu, newKitchenOrders, barOrders);
   };
 
-  // Rimuovi piatto dall'ordine corrente
+  const updateBarOrderStatus = async (orderId, newStatus) => {
+    const newBarOrders = barOrders.map(order =>
+      order.id === orderId ? { ...order, status: newStatus } : order
+    );
+    setBarOrders(newBarOrders);
+    await saveData(menu, kitchenOrders, newBarOrders);
+  };
+
   const removeFromOrder = (index) => {
     setCurrentOrderItems(currentOrderItems.filter((_, i) => i !== index));
   };
 
-  // Modifica quantità
   const updateQuantity = (index, newQty) => {
     if (newQty > 0) {
       setCurrentOrderItems(currentOrderItems.map((item, i) =>
@@ -115,26 +141,30 @@ export default function GestionaleRistorante() {
     }
   };
 
-  // Modifica note
   const updateNotes = (index, notes) => {
     setCurrentOrderItems(currentOrderItems.map((item, i) =>
       i === index ? { ...item, notes } : item
     ));
   };
 
-  // Segna come pagato
   const markAsPaid = async (orderId) => {
-    const newOrders = orders.map(order =>
-      order.id === orderId ? { ...order, paid: true } : order
-    );
-    setOrders(newOrders.filter(o => !o.paid));
-    setCompletedOrders(newOrders.filter(o => o.paid));
-    await saveData(menu, newOrders);
+    const newKitchenOrders = kitchenOrders.filter(o => o.id !== orderId);
+    const newBarOrders = barOrders.filter(o => o.id !== orderId);
+    setKitchenOrders(newKitchenOrders);
+    setBarOrders(newBarOrders);
+    await saveData(menu, newKitchenOrders, newBarOrders);
   };
 
-  // Ottieni ordini per tavolo
-  const getTableOrders = (tableId) => {
-    return orders.filter(o => o.tableId === tableId);
+  const getTableKitchenOrders = (tableId) => {
+    return kitchenOrders.filter(o => o.tableId === tableId);
+  };
+
+  const getTableBarOrders = (tableId) => {
+    return barOrders.filter(o => o.tableId === tableId);
+  };
+
+  const getTableAllOrders = (tableId) => {
+    return [...kitchenOrders, ...barOrders].filter(o => o.tableId === tableId);
   };
 
   const logout = () => {
@@ -151,8 +181,8 @@ export default function GestionaleRistorante() {
 
   // ===== GESTORE =====
   if (role === 'gestore') {
-    const tableOrders = selectedTableForPayment ? getTableOrders(selectedTableForPayment) : [];
-    const totalAmount = tableOrders.reduce((sum, order) => sum + order.total, 0);
+    const tableAllOrders = selectedTableForPayment ? getTableAllOrders(selectedTableForPayment) : [];
+    const totalAmount = tableAllOrders.reduce((sum, order) => sum + order.total, 0);
 
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 p-4">
@@ -165,7 +195,6 @@ export default function GestionaleRistorante() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Sezione Menu */}
             <div className="lg:col-span-1">
               <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
                 <h2 className="text-xl font-semibold text-gray-800 mb-4">Aggiungi Piatto</h2>
@@ -225,13 +254,12 @@ export default function GestionaleRistorante() {
               </div>
             </div>
 
-            {/* Sezione Tavoli e Pagamenti */}
             <div className="lg:col-span-2">
               <div className="bg-white rounded-lg shadow-lg p-6">
                 <h2 className="text-xl font-semibold text-gray-800 mb-4">Tavoli - Gestione Pagamenti</h2>
                 <div className="grid grid-cols-4 gap-3 mb-6">
                   {tables.map(table => {
-                    const hasOrders = getTableOrders(table.id).length > 0;
+                    const hasOrders = getTableAllOrders(table.id).length > 0;
                     return (
                       <button
                         key={table.id}
@@ -245,7 +273,7 @@ export default function GestionaleRistorante() {
                         }`}
                       >
                         T{table.id}
-                        {hasOrders && <div className="text-xs mt-1">({getTableOrders(table.id).length})</div>}
+                        {hasOrders && <div className="text-xs mt-1">({getTableAllOrders(table.id).length})</div>}
                       </button>
                     );
                   })}
@@ -255,11 +283,11 @@ export default function GestionaleRistorante() {
                   <div className="space-y-4">
                     <h3 className="text-lg font-semibold text-gray-800">Ordini Tavolo {selectedTableForPayment}</h3>
                     
-                    {tableOrders.length === 0 ? (
+                    {tableAllOrders.length === 0 ? (
                       <p className="text-gray-500 text-center py-4">Nessun ordine in sospeso</p>
                     ) : (
                       <div className="space-y-4">
-                        {tableOrders.map(order => (
+                        {tableAllOrders.map(order => (
                           <div key={order.id} className={`border-l-4 p-4 rounded-lg ${
                             order.status === 'nuovo' ? 'bg-red-50 border-red-500' :
                             order.status === 'in_preparazione' ? 'bg-yellow-50 border-yellow-500' :
@@ -297,7 +325,7 @@ export default function GestionaleRistorante() {
                             <span className="text-3xl font-bold">€ {totalAmount.toFixed(2)}</span>
                           </div>
                           <button
-                            onClick={() => markAsPaid(tableOrders[0].id)}
+                            onClick={() => markAsPaid(tableAllOrders[0].id)}
                             className="w-full bg-green-500 text-white py-4 rounded-lg font-bold hover:bg-green-600 transition flex items-center justify-center gap-2 text-lg"
                           >
                             <DollarSign size={24} /> Segna come Pagato
@@ -330,13 +358,12 @@ export default function GestionaleRistorante() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Tavoli */}
             <div className="lg:col-span-1">
               <div className="bg-white rounded-lg shadow-lg p-6 sticky top-4">
                 <h2 className="text-xl font-semibold text-gray-800 mb-4">Tavoli</h2>
                 <div className="grid grid-cols-3 gap-2">
                   {tables.map(table => (
-                    <button key={table.id} onClick={() => setSelectedTable(table.id)} className={`p-3 rounded-lg font-bold text-sm transition ${selectedTable === table.id ? 'bg-blue-500 text-white' : orders.some(o => o.tableId === table.id) ? 'bg-orange-100 text-orange-800 hover:bg-orange-200' : 'bg-green-100 text-green-800 hover:bg-green-200'}`}>
+                    <button key={table.id} onClick={() => setSelectedTable(table.id)} className={`p-3 rounded-lg font-bold text-sm transition ${selectedTable === table.id ? 'bg-blue-500 text-white' : getTableAllOrders(table.id).length > 0 ? 'bg-orange-100 text-orange-800 hover:bg-orange-200' : 'bg-green-100 text-green-800 hover:bg-green-200'}`}>
                       T{table.id}
                     </button>
                   ))}
@@ -345,7 +372,6 @@ export default function GestionaleRistorante() {
               </div>
             </div>
 
-            {/* Ordine corrente */}
             <div className="lg:col-span-2">
               <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
                 <div className="flex justify-between items-center mb-4">
@@ -355,7 +381,6 @@ export default function GestionaleRistorante() {
                   </button>
                 </div>
 
-                {/* Menu */}
                 {showMenu && (
                   <div className="mb-6 p-4 bg-gray-50 rounded-lg max-h-64 overflow-y-auto">
                     {visibleMenu.length === 0 ? <p className="text-gray-500">Nessun piatto disponibile</p> : (
@@ -392,7 +417,6 @@ export default function GestionaleRistorante() {
                   </div>
                 )}
 
-                {/* Articoli ordinati */}
                 <div className="space-y-3 mb-6">
                   {currentOrderItems.length === 0 ? <p className="text-gray-500">Nessun articolo</p> : (
                     currentOrderItems.map((item, idx) => (
@@ -432,16 +456,15 @@ export default function GestionaleRistorante() {
                 )}
               </div>
 
-              {/* Storico Ordini */}
               {selectedTable && (
                 <div className="bg-white rounded-lg shadow-lg p-6">
                   <h3 className="text-xl font-semibold text-gray-800 mb-4">Storico Ordini - Tavolo {selectedTable}</h3>
                   
                   <div className="space-y-3 max-h-96 overflow-y-auto">
-                    {getTableOrders(selectedTable).length === 0 ? (
+                    {getTableAllOrders(selectedTable).length === 0 ? (
                       <p className="text-gray-500 text-center py-4">Nessun ordine in sospeso</p>
                     ) : (
-                      getTableOrders(selectedTable).map(order => (
+                      getTableAllOrders(selectedTable).map(order => (
                         <div key={order.id} className={`border-l-4 p-3 rounded-lg text-sm ${
                           order.status === 'nuovo' ? 'bg-red-50 border-red-500' :
                           order.status === 'in_preparazione' ? 'bg-yellow-50 border-yellow-500' :
@@ -484,11 +507,6 @@ export default function GestionaleRistorante() {
 
   // ===== CUCINA =====
   if (role === 'cucina') {
-    const activeOrders = orders.filter(o => o.status !== 'completato' && o.items.some(item => {
-      const dish = menu.find(d => d.id === item.dishId);
-      return dish && dish.category !== 'Bevande';
-    }));
-    
     return (
       <div className="min-h-screen bg-gradient-to-br from-red-50 to-red-100 p-4">
         <div className="max-w-6xl mx-auto">
@@ -499,52 +517,46 @@ export default function GestionaleRistorante() {
             </button>
           </div>
 
-          {activeOrders.length === 0 ? (
+          {kitchenOrders.length === 0 ? (
             <div className="text-center py-12 bg-white rounded-lg shadow-lg">
-              <p className="text-2xl text-gray-500">✨ Nessun ordine in attesa</p>
+              <p className="text-2xl text-gray-500">
+                ✨ Nessun ordine in attesa</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {activeOrders.map(order => {
-                const nonBeverageItems = order.items.filter(item => {
-                  const dish = menu.find(d => d.id === item.dishId);
-                  return dish && dish.category !== 'Bevande';
-                });
-                
-                return (
-                  <div key={order.id} className={`p-6 rounded-lg shadow-lg ${order.status === 'nuovo' ? 'bg-red-100 border-4 border-red-500' : order.status === 'in_preparazione' ? 'bg-yellow-100 border-4 border-yellow-500' : 'bg-green-100 border-4 border-green-500'}`}>
-                    <div className="flex justify-between items-center mb-4">
-                      <h3 className="text-2xl font-bold text-gray-800">Tavolo {order.tableId}</h3>
-                      <span className="text-xs text-gray-600">{order.timestamp}</span>
-                    </div>
-                    
-                    <div className="space-y-2 mb-4">
-                      {nonBeverageItems.map((item, idx) => (
-                        <div key={idx} className="bg-white p-2 rounded">
-                          <p className="font-semibold text-gray-800 text-sm">{item.qty}x {item.name}</p>
-                          {item.notes && <p className="text-xs text-red-600 font-semibold">📝 {item.notes}</p>}
-                        </div>
-                      ))}
-                    </div>
-
-                    <div className="flex gap-2">
-                      {order.status === 'nuovo' && (
-                        <button onClick={() => updateOrderStatus(order.id, 'in_preparazione')} className="flex-1 bg-yellow-500 text-white py-2 rounded-lg font-semibold hover:bg-yellow-600 transition flex items-center justify-center gap-2">
-                          <Clock size={18} /> In Prep
-                        </button>
-                      )}
-                      {order.status === 'in_preparazione' && (
-                        <button onClick={() => updateOrderStatus(order.id, 'pronto')} className="flex-1 bg-green-500 text-white py-2 rounded-lg font-semibold hover:bg-green-600 transition flex items-center justify-center gap-2">
-                          <Check size={18} /> Pronto!
-                        </button>
-                      )}
-                      {order.status === 'pronto' && (
-                        <div className="flex-1 bg-green-500 text-white py-2 rounded-lg font-semibold text-center">✓ Pronto</div>
-                      )}
-                    </div>
+              {kitchenOrders.map(order => (
+                <div key={order.id} className={`p-6 rounded-lg shadow-lg ${order.status === 'nuovo' ? 'bg-red-100 border-4 border-red-500' : order.status === 'in_preparazione' ? 'bg-yellow-100 border-4 border-yellow-500' : 'bg-green-100 border-4 border-green-500'}`}>
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-2xl font-bold text-gray-800">Tavolo {order.tableId}</h3>
+                    <span className="text-xs text-gray-600">{order.timestamp}</span>
                   </div>
-                );
-              })}
+                  
+                  <div className="space-y-2 mb-4">
+                    {order.items.map((item, idx) => (
+                      <div key={idx} className="bg-white p-2 rounded">
+                        <p className="font-semibold text-gray-800 text-sm">{item.qty}x {item.name}</p>
+                        {item.notes && <p className="text-xs text-red-600 font-semibold">📝 {item.notes}</p>}
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="flex gap-2">
+                    {order.status === 'nuovo' && (
+                      <button onClick={() => updateKitchenOrderStatus(order.id, 'in_preparazione')} className="flex-1 bg-yellow-500 text-white py-2 rounded-lg font-semibold hover:bg-yellow-600 transition flex items-center justify-center gap-2">
+                        <Clock size={18} /> In Prep
+                      </button>
+                    )}
+                    {order.status === 'in_preparazione' && (
+                      <button onClick={() => updateKitchenOrderStatus(order.id, 'pronto')} className="flex-1 bg-green-500 text-white py-2 rounded-lg font-semibold hover:bg-green-600 transition flex items-center justify-center gap-2">
+                        <Check size={18} /> Pronto!
+                      </button>
+                    )}
+                    {order.status === 'pronto' && (
+                      <div className="flex-1 bg-green-500 text-white py-2 rounded-lg font-semibold text-center">✓ Pronto</div>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>
@@ -554,11 +566,6 @@ export default function GestionaleRistorante() {
 
   // ===== BAR =====
   if (role === 'bar') {
-    const activeBarOrders = orders.filter(o => o.status !== 'completato' && o.items.some(item => {
-      const dish = menu.find(d => d.id === item.dishId);
-      return dish && dish.category === 'Bevande';
-    }));
-    
     return (
       <div className="min-h-screen bg-gradient-to-br from-cyan-50 to-cyan-100 p-4">
         <div className="max-w-6xl mx-auto">
@@ -569,52 +576,45 @@ export default function GestionaleRistorante() {
             </button>
           </div>
 
-          {activeBarOrders.length === 0 ? (
+          {barOrders.length === 0 ? (
             <div className="text-center py-12 bg-white rounded-lg shadow-lg">
               <p className="text-2xl text-gray-500">✨ Nessuna bevanda in attesa</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {activeBarOrders.map(order => {
-                const beverageItems = order.items.filter(item => {
-                  const dish = menu.find(d => d.id === item.dishId);
-                  return dish && dish.category === 'Bevande';
-                });
-                
-                return (
-                  <div key={order.id} className={`p-6 rounded-lg shadow-lg ${order.status === 'nuovo' ? 'bg-cyan-100 border-4 border-cyan-500' : order.status === 'in_preparazione' ? 'bg-blue-100 border-4 border-blue-500' : 'bg-green-100 border-4 border-green-500'}`}>
-                    <div className="flex justify-between items-center mb-4">
-                      <h3 className="text-2xl font-bold text-gray-800">Tavolo {order.tableId}</h3>
-                      <span className="text-xs text-gray-600">{order.timestamp}</span>
-                    </div>
-                    
-                    <div className="space-y-2 mb-4">
-                      {beverageItems.map((item, idx) => (
-                        <div key={idx} className="bg-white p-2 rounded">
-                          <p className="font-semibold text-gray-800 text-sm">{item.qty}x {item.name}</p>
-                          {item.notes && <p className="text-xs text-red-600 font-semibold">📝 {item.notes}</p>}
-                        </div>
-                      ))}
-                    </div>
-
-                    <div className="flex gap-2">
-                      {order.status === 'nuovo' && (
-                        <button onClick={() => updateOrderStatus(order.id, 'in_preparazione')} className="flex-1 bg-blue-500 text-white py-2 rounded-lg font-semibold hover:bg-blue-600 transition flex items-center justify-center gap-2">
-                          <Clock size={18} /> In Prep
-                        </button>
-                      )}
-                      {order.status === 'in_preparazione' && (
-                        <button onClick={() => updateOrderStatus(order.id, 'pronto')} className="flex-1 bg-green-500 text-white py-2 rounded-lg font-semibold hover:bg-green-600 transition flex items-center justify-center gap-2">
-                          <Check size={18} /> Pronto!
-                        </button>
-                      )}
-                      {order.status === 'pronto' && (
-                        <div className="flex-1 bg-green-500 text-white py-2 rounded-lg font-semibold text-center">✓ Pronto</div>
-                      )}
-                    </div>
+              {barOrders.map(order => (
+                <div key={order.id} className={`p-6 rounded-lg shadow-lg ${order.status === 'nuovo' ? 'bg-cyan-100 border-4 border-cyan-500' : order.status === 'in_preparazione' ? 'bg-blue-100 border-4 border-blue-500' : 'bg-green-100 border-4 border-green-500'}`}>
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-2xl font-bold text-gray-800">Tavolo {order.tableId}</h3>
+                    <span className="text-xs text-gray-600">{order.timestamp}</span>
                   </div>
-                );
-              })}
+                  
+                  <div className="space-y-2 mb-4">
+                    {order.items.map((item, idx) => (
+                      <div key={idx} className="bg-white p-2 rounded">
+                        <p className="font-semibold text-gray-800 text-sm">{item.qty}x {item.name}</p>
+                        {item.notes && <p className="text-xs text-red-600 font-semibold">📝 {item.notes}</p>}
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="flex gap-2">
+                    {order.status === 'nuovo' && (
+                      <button onClick={() => updateBarOrderStatus(order.id, 'in_preparazione')} className="flex-1 bg-blue-500 text-white py-2 rounded-lg font-semibold hover:bg-blue-600 transition flex items-center justify-center gap-2">
+                        <Clock size={18} /> In Prep
+                      </button>
+                    )}
+                    {order.status === 'in_preparazione' && (
+                      <button onClick={() => updateBarOrderStatus(order.id, 'pronto')} className="flex-1 bg-green-500 text-white py-2 rounded-lg font-semibold hover:bg-green-600 transition flex items-center justify-center gap-2">
+                        <Check size={18} /> Pronto!
+                      </button>
+                    )}
+                    {order.status === 'pronto' && (
+                      <div className="flex-1 bg-green-500 text-white py-2 rounded-lg font-semibold text-center">✓ Pronto</div>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>
