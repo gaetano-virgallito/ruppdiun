@@ -80,7 +80,6 @@ export default function GestionaleRistorante() {
         paid: false
       };
 
-      // Separa ordini cucina e bar
       const kitchenItems = currentOrderItems.filter(item => {
         const dish = menu.find(d => d.id === item.dishId);
         return dish && dish.category !== 'Bevande';
@@ -456,7 +455,7 @@ export default function GestionaleRistorante() {
                 )}
               </div>
 
-             {selectedTable && (
+              {selectedTable && (
                 <div className="bg-white rounded-lg shadow-lg p-6">
                   <h3 className="text-xl font-semibold text-gray-800 mb-4">Storico Ordini - Tavolo {selectedTable}</h3>
                   
@@ -503,43 +502,6 @@ export default function GestionaleRistorante() {
                   </div>
                 </div>
               )}
-                    {getTableAllOrders(selectedTable).length === 0 ? (
-                      <p className="text-gray-500 text-center py-4">Nessun ordine in sospeso</p>
-                    ) : (
-                      getTableAllOrders(selectedTable).map(order => (
-                        <div key={order.id} className={`border-l-4 p-3 rounded-lg text-sm ${
-                          order.status === 'nuovo' ? 'bg-red-50 border-red-500' :
-                          order.status === 'in_preparazione' ? 'bg-yellow-50 border-yellow-500' :
-                          'bg-green-50 border-green-500'
-                        }`}>
-                          <div className="flex justify-between items-start mb-2">
-                            <span className="text-xs text-gray-600">{order.timestamp}</span>
-                            <span className={`text-xs px-2 py-1 rounded font-semibold ${
-                              order.status === 'nuovo' ? 'bg-red-200 text-red-800' :
-                              order.status === 'in_preparazione' ? 'bg-yellow-200 text-yellow-800' :
-                              'bg-green-200 text-green-800'
-                            }`}>
-                              {order.status === 'nuovo' ? '🆕 Nuovo' : order.status === 'in_preparazione' ? '⏳ In Prep' : '✓ Pronto'}
-                            </span>
-                          </div>
-                          <div className="space-y-1">
-                            {order.items.map((item, idx) => (
-                              <div key={idx} className="flex justify-between text-xs">
-                                <span>{item.qty}x {item.name}</span>
-                                <span className="font-semibold">€ {(item.price * item.qty).toFixed(2)}</span>
-                              </div>
-                            ))}
-                          </div>
-                          <div className="border-t pt-2 mt-2 flex justify-between font-bold text-xs">
-                            <span>Tot:</span>
-                            <span>€ {order.total.toFixed(2)}</span>
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-              )}
             </div>
           </div>
         </div>
@@ -554,15 +516,15 @@ export default function GestionaleRistorante() {
         <div className="max-w-6xl mx-auto">
           <div className="flex justify-between items-center mb-6">
             <h1 className="text-3xl font-bold text-red-900">👨‍🍳 Terminale Cucina</h1>
-            <button onClick={logout} className="flex items-center gap-2 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition">
+            <button onClick={logout} className="flex items-center gap-2
+            bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition">
               <LogOut size={18} /> Esci
             </button>
           </div>
 
           {kitchenOrders.length === 0 ? (
             <div className="text-center py-12 bg-white rounded-lg shadow-lg">
-              <p className="text-2xl text-gray-500">
-                ✨ Nessun ordine in attesa</p>
+              <p className="text-2xl text-gray-500">✨ Nessun ordine in attesa</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
