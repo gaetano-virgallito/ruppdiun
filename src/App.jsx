@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
-import { Plus, Trash2, Check, Clock, AlertCircle, LogOut, Eye, EyeOff, DollarSign } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Plus, Trash2, Check, Clock, LogOut, Eye, EyeOff, DollarSign } from 'lucide-react';
+import { useDatabase } from './useDatabase';
 
 export default function GestionaleRistorante() {
+  const { menu: dbMenu, orders: dbOrders, loading, saveData } = useDatabase();
   const [role, setRole] = useState(null);
   const [menu, setMenu] = useState([]);
   const [orders, setOrders] = useState([]);
@@ -9,24 +11,44 @@ export default function GestionaleRistorante() {
   const [completedOrders, setCompletedOrders] = useState([]);
   const [hiddenDishes, setHiddenDishes] = useState([]);
   
-  // Form menu
   const [newDish, setNewDish] = useState({ name: '', price: '', category: 'Antipasti', notes: '', allergens: '' });
   const [selectedTable, setSelectedTable] = useState(null);
   const [currentOrderItems, setCurrentOrderItems] = useState([]);
   const [showMenu, setShowMenu] = useState(false);
   const [selectedTableForPayment, setSelectedTableForPayment] = useState(null);
 
+  // Carica dati da GitHub
+  useEffect(() => {
+    setMenu(dbMenu);
+  }, [dbMenu]);
+
+  useEffect(() => {
+    setOrders(dbOrders.filter(o => !o.paid));
+    setCompletedOrders(dbOrders.filter(o => o.paid));
+  }, [dbOrders]);
+
   // Aggiungi piatto al menu
-  const addDish = () => {
+  const addDish = async () => {
     if (newDish.name && newDish.price) {
-      setMenu([...menu, { ...newDish, id: Date.now(), price: parseFloat(newDish.price) }]);
+      const newMenu = [...menu, { 
+        id: Date.now().toString(), 
+        name: newDish.name,
+        price: parseFloat(newDish.price),
+        category: newDish.category,
+        notes: newDish.notes,
+        allergens: newDish.allergens
+      }];
+      setMenu(newMenu);
+      await saveData(newMenu, orders);
       setNewDish({ name: '', price: '', category: 'Antipasti', notes: '', allergens: '' });
     }
   };
 
   // Rimuovi piatto dal menu
-  const removeDish = (id) => {
-    setMenu(menu.filter(d => d.id !== id));
+  const removeDish = async (id) => {
+    const newMenu = menu.filter(d => d.id !== id);
+    setMenu(newMenu);
+    await saveData(newMenu, orders);
     setHiddenDishes(hiddenDishes.filter(hd => hd !== id));
   };
 
@@ -50,11 +72,10 @@ export default function GestionaleRistorante() {
   };
 
   // Salva ordine
-  const saveOrder = () => {
+  const saveOrder = async () => {
     if (selectedTable && currentOrderItems.length > 0) {
-      const orderId = Date.now();
       const newOrder = {
-        id: orderId,
+        id: Date.now().toString(),
         tableId: selectedTable,
         items: currentOrderItems,
         status: 'nuovo',
@@ -62,19 +83,22 @@ export default function GestionaleRistorante() {
         total: currentOrderItems.reduce((sum, item) => sum + item.price * item.qty, 0),
         paid: false
       };
-      setOrders([...orders, newOrder]);
-      setTables(tables.map(t => t.id === selectedTable ? { ...t, status: 'occupato' } : t));
+      const newOrders = [...orders, newOrder];
+      setOrders(newOrders);
+      await saveData(menu, newOrders);
       setCurrentOrderItems([]);
       setSelectedTable(null);
       setShowMenu(false);
     }
   };
 
-  // Cambia stato ordine in cucina
-  const updateOrderStatus = (orderId, newStatus) => {
-    setOrders(orders.map(order =>
+  // Aggiorna stato ordine
+  const updateOrderStatus = async (orderId, newStatus) => {
+    const newOrders = orders.map(order =>
       order.id === orderId ? { ...order, status: newStatus } : order
-    ));
+    );
+    setOrders(newOrders);
+    await saveData(menu, newOrders);
   };
 
   // Rimuovi piatto dall'ordine corrente
@@ -91,21 +115,21 @@ export default function GestionaleRistorante() {
     }
   };
 
-  // Modifica note ordine
+  // Modifica note
   const updateNotes = (index, notes) => {
     setCurrentOrderItems(currentOrderItems.map((item, i) =>
       i === index ? { ...item, notes } : item
     ));
   };
 
-  // Segna come pagato e sposta negli ordini completati
-  const markAsPaid = (orderId) => {
-    const order = orders.find(o => o.id === orderId);
-    if (order) {
-      setCompletedOrders([...completedOrders, { ...order, paid: true, paidAt: new Date().toLocaleTimeString('it-IT') }]);
-      setOrders(orders.filter(o => o.id !== orderId));
-      setTables(tables.map(t => t.id === order.tableId ? { ...t, status: 'libero' } : t));
-    }
+  // Segna come pagato
+  const markAsPaid = async (orderId) => {
+    const newOrders = orders.map(order =>
+      order.id === orderId ? { ...order, paid: true } : order
+    );
+    setOrders(newOrders.filter(o => !o.paid));
+    setCompletedOrders(newOrders.filter(o => o.paid));
+    await saveData(menu, newOrders);
   };
 
   // Ottieni ordini per tavolo
@@ -120,6 +144,10 @@ export default function GestionaleRistorante() {
     setShowMenu(false);
     setSelectedTableForPayment(null);
   };
+
+  if (loading) {
+    return <div className="min-h-screen flex items-center justify-center"><p className="text-2xl">Caricamento...</p></div>;
+  }
 
   // ===== GESTORE =====
   if (role === 'gestore') {
@@ -308,7 +336,7 @@ export default function GestionaleRistorante() {
                 <h2 className="text-xl font-semibold text-gray-800 mb-4">Tavoli</h2>
                 <div className="grid grid-cols-3 gap-2">
                   {tables.map(table => (
-                    <button key={table.id} onClick={() => setSelectedTable(table.id)} className={`p-3 rounded-lg font-bold text-sm transition ${selectedTable === table.id ? 'bg-blue-500 text-white' : table.status === 'libero' ? 'bg-green-100 text-green-800 hover:bg-green-200' : 'bg-orange-100 text-orange-800 hover:bg-orange-200'}`}>
+                    <button key={table.id} onClick={() => setSelectedTable(table.id)} className={`p-3 rounded-lg font-bold text-sm transition ${selectedTable === table.id ? 'bg-blue-500 text-white' : orders.some(o => o.tableId === table.id) ? 'bg-orange-100 text-orange-800 hover:bg-orange-200' : 'bg-green-100 text-green-800 hover:bg-green-200'}`}>
                       T{table.id}
                     </button>
                   ))}
