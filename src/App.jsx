@@ -222,8 +222,56 @@ export default function GestionaleRistorante() {
     await saveData(menu, newKitchenOrders, barOrders, archivedOrders);
   };
 
+  const cancelOrder = async (orderId) => {
+    if (!confirm('Sei sicuro di voler annullare questo ordine?')) return;
+    
+    // Cerca se è ordine cucina o bar e marca come annullato
+    if (orderId.endsWith('-k')) {
+      const newKitchenOrders = kitchenOrders.map(order =>
+        order.id === orderId ? { ...order, status: 'annullato' } : order
+      );
+      setKitchenOrders(newKitchenOrders);
+      await saveData(menu, newKitchenOrders, barOrders, archivedOrders);
+    } else {
+      const newBarOrders = barOrders.map(order =>
+        order.id === orderId ? { ...order, status: 'annullato' } : order
+      );
+      setBarOrders(newBarOrders);
+      await saveData(menu, kitchenOrders, newBarOrders, archivedOrders);
+    }
+  };
+
+  const goBackOrderStatus = async (orderId, isKitchen = true) => {
+    if (isKitchen) {
+      const newKitchenOrders = kitchenOrders.map(order => {
+        if (order.id === orderId) {
+          if (order.status === 'pronto') return { ...order, status: 'in_preparazione' };
+          if (order.status === 'in_preparazione') return { ...order, status: 'nuovo' };
+        }
+        return order;
+      });
+      setKitchenOrders(newKitchenOrders);
+      await saveData(menu, newKitchenOrders, barOrders, archivedOrders);
+    } else {
+      const newBarOrders = barOrders.map(order => {
+        if (order.id === orderId) {
+          if (order.status === 'pronto') return { ...order, status: 'in_preparazione' };
+          if (order.status === 'in_preparazione') return { ...order, status: 'nuovo' };
+        }
+        return order;
+      });
+      setBarOrders(newBarOrders);
+      await saveData(menu, kitchenOrders, newBarOrders, archivedOrders);
+    }
+  };
+
   const markAsPaid = async (tableId) => {
-    const tableOrders = getTableAllOrders(tableId);
+    const tableOrders = getTableAllOrders(tableId).filter(o => o.status !== 'annullato'); // Escludi annullati
+    
+    if (tableOrders.length === 0) {
+      alert('Non ci sono ordini da pagare per questo tavolo.');
+      return;
+    }
     
     // Crea record archivio
     const archivedRecord = {
@@ -252,9 +300,11 @@ export default function GestionaleRistorante() {
   };
 
   const calculateTableTotal = (tableId) => {
-    return getTableAllOrders(tableId).reduce((sum, order) => 
-      sum + order.items.reduce((itemSum, item) => itemSum + (item.price * item.qty), 0), 0
-    );
+    return getTableAllOrders(tableId)
+      .filter(order => order.status !== 'annullato') // Escludi ordini annullati
+      .reduce((sum, order) => 
+        sum + order.items.reduce((itemSum, item) => itemSum + (item.price * item.qty), 0), 0
+      );
   };
 
   const closeNotification = (notifId) => {
@@ -304,6 +354,62 @@ export default function GestionaleRistorante() {
         `).join('')}
         <div class="total">
           TOTALE: € ${total.toFixed(2)}
+        </div>
+        <div style="text-align: center; margin-top: 30px;">
+          <button onclick="window.print()" style="padding: 10px 20px; font-size: 16px; cursor: pointer;">
+            🖨️ Stampa
+          </button>
+          <button onclick="window.close()" style="padding: 10px 20px; font-size: 16px; cursor: pointer; margin-left: 10px;">
+            ❌ Chiudi
+          </button>
+        </div>
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
+  const printArchivedOrder = (record) => {
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Conto Archiviato - Tavolo ${record.tableId}</title>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 20px; }
+          h1 { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; }
+          .header { text-align: center; margin-bottom: 20px; }
+          .order { margin-bottom: 20px; border: 1px solid #ddd; padding: 10px; }
+          .order-header { font-weight: bold; background: #f0f0f0; padding: 5px; margin-bottom: 10px; }
+          .item { display: flex; justify-content: space-between; padding: 5px 0; }
+          .total { margin-top: 20px; padding-top: 10px; border-top: 2px solid #000; font-size: 1.2em; font-weight: bold; text-align: right; }
+          @media print {
+            button { display: none; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>🍽️ Gestionale Ristorante</h1>
+          <p>Tavolo ${record.tableId} - ${record.timestamp}</p>
+          <p style="color: #666; font-size: 0.9em;">📦 Ordine Archiviato</p>
+        </div>
+        ${record.orders.map(order => `
+          <div class="order">
+            <div class="order-header">
+              Ordine ore ${order.timestamp} - ${order.id.endsWith('-k') ? '👨‍🍳 Cucina' : '🍹 Bar'}
+            </div>
+            ${order.items.map(item => `
+              <div class="item">
+                <span>${item.qty}x ${item.name}${item.notes ? ` (${item.notes})` : ''}</span>
+                <span>€ ${(item.price * item.qty).toFixed(2)}</span>
+              </div>
+            `).join('')}
+          </div>
+        `).join('')}
+        <div class="total">
+          TOTALE: € ${record.total.toFixed(2)}
         </div>
         <div style="text-align: center; margin-top: 30px;">
           <button onclick="window.print()" style="padding: 10px 20px; font-size: 16px; cursor: pointer;">
@@ -403,7 +509,15 @@ export default function GestionaleRistorante() {
                           <p className="font-bold text-gray-800">Tavolo {record.tableId}</p>
                           <p className="text-sm text-gray-600">{record.timestamp}</p>
                         </div>
-                        <span className="text-xl font-bold text-green-600">€ {record.total.toFixed(2)}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xl font-bold text-green-600">€ {record.total.toFixed(2)}</span>
+                          <button
+                            onClick={() => printArchivedOrder(record)}
+                            className="bg-blue-500 text-white px-3 py-1 rounded text-xs hover:bg-blue-600 transition"
+                          >
+                            🖨️ Stampa
+                          </button>
+                        </div>
                       </div>
                       <div className="text-sm text-gray-700">
                         {record.orders.map((order, idx) => (
@@ -569,6 +683,7 @@ export default function GestionaleRistorante() {
                           <div 
                             key={order.id} 
                             className={`border-l-4 p-4 rounded-lg ${
+                              order.status === 'annullato' ? 'bg-gray-200 border-gray-600' :
                               order.status === 'in_attesa' ? 'bg-gray-50 border-gray-400' :
                               order.status === 'nuovo' ? 'bg-red-50 border-red-500' :
                               order.status === 'in_preparazione' ? 'bg-yellow-50 border-yellow-500' :
@@ -578,12 +693,14 @@ export default function GestionaleRistorante() {
                             <div className="flex justify-between items-start mb-2">
                               <span className="text-sm text-gray-600">{order.timestamp}</span>
                               <span className={`text-xs px-2 py-1 rounded ${
+                                order.status === 'annullato' ? 'bg-gray-400 text-white' :
                                 order.status === 'in_attesa' ? 'bg-gray-200 text-gray-800' :
                                 order.status === 'nuovo' ? 'bg-red-200 text-red-800' :
                                 order.status === 'in_preparazione' ? 'bg-yellow-200 text-yellow-800' :
                                 'bg-green-200 text-green-800'
                               }`}>
-                                {order.status === 'in_attesa' ? 'In Attesa' :
+                                {order.status === 'annullato' ? 'Annullato' :
+                                 order.status === 'in_attesa' ? 'In Attesa' :
                                  order.status === 'nuovo' ? 'Nuovo' : 
                                  order.status === 'in_preparazione' ? 'In Preparazione' : 
                                  'Pronto'}
@@ -853,11 +970,13 @@ export default function GestionaleRistorante() {
                           // Identifica se è ordine cucina o bar
                           const isKitchenOrder = order.id.endsWith('-k');
                           const isBarOrder = order.id.endsWith('-b');
+                          const isAnnullato = order.status === 'annullato';
                           
                           return (
                           <div 
                             key={order.id} 
                             className={`border-l-4 p-3 rounded-lg text-sm ${
+                              isAnnullato ? 'bg-gray-200 border-gray-600 opacity-60' :
                               order.status === 'in_attesa' && isKitchenOrder ? 'bg-gray-50 border-gray-400' :
                               order.status === 'nuovo' ? 'bg-red-50 border-red-500' :
                               order.status === 'in_preparazione' ? 'bg-yellow-50 border-yellow-500' :
@@ -871,12 +990,14 @@ export default function GestionaleRistorante() {
                                 {isKitchenOrder && <span className="text-xs bg-red-200 text-red-800 px-1 rounded">🍽️</span>}
                               </div>
                               <span className={`text-xs px-2 py-1 rounded font-semibold ${
+                                isAnnullato ? 'bg-gray-400 text-white' :
                                 order.status === 'in_attesa' && isKitchenOrder ? 'bg-gray-200 text-gray-800' :
                                 order.status === 'nuovo' ? 'bg-red-200 text-red-800' :
                                 order.status === 'in_preparazione' ? 'bg-yellow-200 text-yellow-800' :
                                 'bg-green-200 text-green-800'
                               }`}>
-                                {order.status === 'in_attesa' && isKitchenOrder ? '⏸️ In Attesa' : 
+                                {isAnnullato ? '❌ Annullato' :
+                                 order.status === 'in_attesa' && isKitchenOrder ? '⏸️ In Attesa' : 
                                  order.status === 'nuovo' ? '🆕 Nuovo' : 
                                  order.status === 'in_preparazione' ? '⏳ In Prep' : 
                                  '✓ Pronto'}
@@ -890,14 +1011,36 @@ export default function GestionaleRistorante() {
                                 </div>
                               ))}
                             </div>
-                            {/* Bottone "Da Preparare" SOLO per ordini CUCINA in attesa */}
-                            {order.status === 'in_attesa' && isKitchenOrder && (
-                              <button
-                                onClick={() => approveKitchenOrder(order.id)}
-                                className="w-full bg-blue-500 text-white py-2 px-3 rounded font-semibold hover:bg-blue-600 transition text-xs flex items-center justify-center gap-1"
-                              >
-                                ▶️ Da Preparare
-                              </button>
+                            {/* Bottoni azione */}
+                            {!isAnnullato && (
+                              <div className="flex gap-2">
+                                {/* Bottone "Da Preparare" SOLO per ordini CUCINA in attesa */}
+                                {order.status === 'in_attesa' && isKitchenOrder && (
+                                  <>
+                                    <button
+                                      onClick={() => approveKitchenOrder(order.id)}
+                                      className="flex-1 bg-blue-500 text-white py-2 px-3 rounded font-semibold hover:bg-blue-600 transition text-xs flex items-center justify-center gap-1"
+                                    >
+                                      ▶️ Da Preparare
+                                    </button>
+                                    <button
+                                      onClick={() => cancelOrder(order.id)}
+                                      className="bg-red-500 text-white py-2 px-3 rounded font-semibold hover:bg-red-600 transition text-xs"
+                                    >
+                                      ❌
+                                    </button>
+                                  </>
+                                )}
+                                {/* Bottone annulla per ordini bar in attesa */}
+                                {order.status === 'in_attesa' && isBarOrder && (
+                                  <button
+                                    onClick={() => cancelOrder(order.id)}
+                                    className="w-full bg-red-500 text-white py-2 px-3 rounded font-semibold hover:bg-red-600 transition text-xs"
+                                  >
+                                    ❌ Annulla Ordine
+                                  </button>
+                                )}
+                              </div>
                             )}
                           </div>
                         );
@@ -952,6 +1095,7 @@ export default function GestionaleRistorante() {
                 <div 
                   key={order.id} 
                   className={`p-6 rounded-lg shadow-lg ${
+                    order.status === 'annullato' ? 'bg-gray-200 border-4 border-gray-500' :
                     order.status === 'in_attesa' ? 'bg-gray-100 border-4 border-gray-400' :
                     order.status === 'nuovo' ? 'bg-red-100 border-4 border-red-500' : 
                     order.status === 'in_preparazione' ? 'bg-yellow-100 border-4 border-yellow-500' : 
@@ -973,6 +1117,11 @@ export default function GestionaleRistorante() {
                   </div>
 
                   <div className="flex gap-2">
+                    {order.status === 'annullato' && (
+                      <div className="flex-1 bg-gray-500 text-white py-2 rounded-lg font-semibold text-center">
+                        ❌ Annullato
+                      </div>
+                    )}
                     {order.status === 'in_attesa' && (
                       <div className="flex-1 bg-gray-400 text-white py-2 rounded-lg font-semibold text-center">
                         ⏸️ In Attesa Cameriere
@@ -987,15 +1136,31 @@ export default function GestionaleRistorante() {
                       </button>
                     )}
                     {order.status === 'in_preparazione' && (
-                      <button 
-                        onClick={() => updateKitchenOrderStatus(order.id, 'pronto')} 
-                        className="flex-1 bg-green-500 text-white py-2 rounded-lg font-semibold hover:bg-green-600 transition flex items-center justify-center gap-2"
-                      >
-                        <Check size={18} /> Pronto!
-                      </button>
+                      <>
+                        <button 
+                          onClick={() => goBackOrderStatus(order.id, true)} 
+                          className="bg-gray-400 text-white py-2 px-3 rounded-lg font-semibold hover:bg-gray-500 transition text-sm"
+                        >
+                          ⬅️
+                        </button>
+                        <button 
+                          onClick={() => updateKitchenOrderStatus(order.id, 'pronto')} 
+                          className="flex-1 bg-green-500 text-white py-2 rounded-lg font-semibold hover:bg-green-600 transition flex items-center justify-center gap-2"
+                        >
+                          <Check size={18} /> Pronto!
+                        </button>
+                      </>
                     )}
                     {order.status === 'pronto' && (
-                      <div className="flex-1 bg-green-500 text-white py-2 rounded-lg font-semibold text-center">✓ Pronto</div>
+                      <>
+                        <button 
+                          onClick={() => goBackOrderStatus(order.id, true)} 
+                          className="bg-gray-400 text-white py-2 px-3 rounded-lg font-semibold hover:bg-gray-500 transition text-sm"
+                        >
+                          ⬅️
+                        </button>
+                        <div className="flex-1 bg-green-500 text-white py-2 rounded-lg font-semibold text-center">✓ Pronto</div>
+                      </>
                     )}
                   </div>
                 </div>
@@ -1037,6 +1202,7 @@ export default function GestionaleRistorante() {
                 <div 
                   key={order.id} 
                   className={`p-6 rounded-lg shadow-lg ${
+                    order.status === 'annullato' ? 'bg-gray-200 border-4 border-gray-500' :
                     order.status === 'nuovo' ? 'bg-cyan-100 border-4 border-cyan-500' : 
                     order.status === 'in_preparazione' ? 'bg-blue-100 border-4 border-blue-500' : 
                     'bg-green-100 border-4 border-green-500'
@@ -1057,6 +1223,11 @@ export default function GestionaleRistorante() {
                   </div>
 
                   <div className="flex gap-2">
+                    {order.status === 'annullato' && (
+                      <div className="flex-1 bg-gray-500 text-white py-2 rounded-lg font-semibold text-center">
+                        ❌ Annullato
+                      </div>
+                    )}
                     {order.status === 'nuovo' && (
                       <button 
                         onClick={() => updateBarOrderStatus(order.id, 'in_preparazione')} 
@@ -1066,15 +1237,31 @@ export default function GestionaleRistorante() {
                       </button>
                     )}
                     {order.status === 'in_preparazione' && (
-                      <button 
-                        onClick={() => updateBarOrderStatus(order.id, 'pronto')} 
-                        className="flex-1 bg-green-500 text-white py-2 rounded-lg font-semibold hover:bg-green-600 transition flex items-center justify-center gap-2"
-                      >
-                        <Check size={18} /> Pronto!
-                      </button>
+                      <>
+                        <button 
+                          onClick={() => goBackOrderStatus(order.id, false)} 
+                          className="bg-gray-400 text-white py-2 px-3 rounded-lg font-semibold hover:bg-gray-500 transition text-sm"
+                        >
+                          ⬅️
+                        </button>
+                        <button 
+                          onClick={() => updateBarOrderStatus(order.id, 'pronto')} 
+                          className="flex-1 bg-green-500 text-white py-2 rounded-lg font-semibold hover:bg-green-600 transition flex items-center justify-center gap-2"
+                        >
+                          <Check size={18} /> Pronto!
+                        </button>
+                      </>
                     )}
                     {order.status === 'pronto' && (
-                      <div className="flex-1 bg-green-500 text-white py-2 rounded-lg font-semibold text-center">✓ Pronto</div>
+                      <>
+                        <button 
+                          onClick={() => goBackOrderStatus(order.id, false)} 
+                          className="bg-gray-400 text-white py-2 px-3 rounded-lg font-semibold hover:bg-gray-500 transition text-sm"
+                        >
+                          ⬅️
+                        </button>
+                        <div className="flex-1 bg-green-500 text-white py-2 rounded-lg font-semibold text-center">✓ Pronto</div>
+                      </>
                     )}
                   </div>
                 </div>
