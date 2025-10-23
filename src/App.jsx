@@ -14,6 +14,7 @@ export default function GestionaleRistorante() {
   const [hiddenDishes, setHiddenDishes] = useState([]);
   const [tables] = useState(Array.from({length: 12}, (_, i) => ({ id: i+1 })));
   const [notifications, setNotifications] = useState([]);
+  const [notifiedOrders, setNotifiedOrders] = useState(new Set());
   
   // Stati per il Gestore
   const [selectedTableForPayment, setSelectedTableForPayment] = useState(null);
@@ -50,9 +51,8 @@ export default function GestionaleRistorante() {
     const readyOrders = allOrders.filter(order => order.status === 'pronto');
     
     readyOrders.forEach(order => {
-      // Controlla se già esiste una notifica per questo ordine
-      const existingNotif = notifications.find(n => n.orderId === order.id);
-      if (!existingNotif) {
+      // Controlla se questo ordine è già stato notificato
+      if (!notifiedOrders.has(order.id)) {
         const newNotif = {
           id: Date.now() + Math.random(),
           orderId: order.id,
@@ -61,8 +61,21 @@ export default function GestionaleRistorante() {
           type: order.id.endsWith('-k') ? 'cucina' : 'bar'
         };
         setNotifications(prev => [...prev, newNotif]);
+        setNotifiedOrders(prev => new Set([...prev, order.id]));
       }
     });
+    
+    // Rimuovi dal tracking gli ordini che non esistono più (pagati)
+    const existingOrderIds = new Set(allOrders.map(o => o.id));
+    setNotifiedOrders(prev => {
+      const updated = new Set([...prev].filter(id => existingOrderIds.has(id)));
+      return updated;
+    });
+    
+    // Rimuovi notifiche per ordini che non esistono più
+    setNotifications(prev => 
+      prev.filter(notif => existingOrderIds.has(notif.orderId))
+    );
   }, [kitchenOrders, barOrders, role]);
 
   // ========== FUNZIONI MENU ==========
@@ -439,6 +452,7 @@ export default function GestionaleRistorante() {
                     <option>Antipasti</option>
                     <option>Primi</option>
                     <option>Secondi</option>
+                    <option>Contorni</option>
                     <option>Dessert</option>
                     <option>Bevande</option>
                   </select>
@@ -472,7 +486,7 @@ export default function GestionaleRistorante() {
                   <p className="text-gray-500 text-sm">Nessun piatto</p>
                 ) : (
                   <div className="space-y-4">
-                    {['Antipasti', 'Primi', 'Secondi', 'Dessert', 'Bevande'].map(cat => {
+                    {['Antipasti', 'Primi', 'Secondi', 'Contorni', 'Dessert', 'Bevande'].map(cat => {
                       const items = menu.filter(d => d.category === cat);
                       if (items.length === 0) return null;
                       return (
@@ -486,6 +500,8 @@ export default function GestionaleRistorante() {
                                     {dish.name}
                                   </p>
                                   <p className="text-green-600 font-bold text-sm">€{dish.price.toFixed(2)}</p>
+                                  {dish.notes && <p className="text-xs text-blue-600 mt-1">ℹ️ {dish.notes}</p>}
+                                  {dish.allergens && <p className="text-xs text-red-600 mt-1">⚠️ {dish.allergens}</p>}
                                 </div>
                                 <div className="flex gap-1">
                                   <button 
@@ -712,12 +728,13 @@ export default function GestionaleRistorante() {
                       <p className="text-gray-500">Nessun piatto disponibile</p>
                     ) : (
                       <div className="space-y-4">
-                        {['Antipasti', 'Primi', 'Secondi', 'Dessert', 'Bevande'].map(category => {
+                        {['Antipasti', 'Primi', 'Secondi', 'Contorni', 'Dessert', 'Bevande'].map(category => {
                           const dishesInCategory = visibleMenu.filter(d => d.category === category);
                           const categoryColors = {
                             'Antipasti': 'border-purple-500 bg-purple-50',
                             'Primi': 'border-blue-500 bg-blue-50',
                             'Secondi': 'border-amber-500 bg-amber-50',
+                            'Contorni': 'border-green-500 bg-green-50',
                             'Dessert': 'border-pink-500 bg-pink-50',
                             'Bevande': 'border-cyan-500 bg-cyan-50'
                           };
@@ -736,6 +753,7 @@ export default function GestionaleRistorante() {
                                       <span className="font-semibold">{dish.name}</span>
                                       <span className="font-bold">€ {dish.price.toFixed(2)}</span>
                                     </div>
+                                    {dish.notes && <p className="text-xs text-blue-600 mt-1">ℹ️ {dish.notes}</p>}
                                     {dish.allergens && <p className="text-xs text-red-600 mt-1">⚠️ {dish.allergens}</p>}
                                   </button>
                                 ))}
