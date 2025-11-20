@@ -1045,7 +1045,7 @@ export default function GestionaleRistorante() {
                                 {isAnnullato ? '❌ Annullato' :
                                  order.status === 'in_attesa' && isKitchenOrder ? '⏸️ In Attesa' : 
                                  order.status === 'nuovo' ? '🆕 Nuovo' : 
-                                 order.status === 'in_preparazione' ? '⏳ Segna in Prep.' : 
+                                 order.status === 'in_preparazione' ? '⏳ In Prep.' : 
                                  '✓ Pronto'}
                               </span>
                             </div>
@@ -1178,7 +1178,7 @@ export default function GestionaleRistorante() {
                         onClick={() => updateKitchenOrderStatus(order.id, 'in_preparazione')} 
                         className="flex-1 bg-yellow-500 text-white py-2 rounded-lg font-semibold hover:bg-yellow-600 transition flex items-center justify-center gap-2"
                       >
-                        <Clock size={18} /> In Prep
+                        <Clock size={18} /> Segna in prep.
                       </button>
                     )}
                     {order.status === 'in_preparazione' && (
