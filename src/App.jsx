@@ -430,7 +430,6 @@ export default function GestionaleRistorante() {
 
   const logout = () => {
     setRole(null);
-    setPassword('');
     setLoginError('');
     setSelectedTable(null);
     setCurrentOrderItems([]);
