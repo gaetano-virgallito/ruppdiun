@@ -1361,6 +1361,7 @@ export default function GestionaleRistorante() {
         </div>
 
         <p className="text-center text-gray-500 text-sm mt-8">Seleziona il tuo ruolo per accedere</p>
+        <p className="text-center text-gray-500 text-xs mt-8">v1.02 - microcreations.it</p>
       </div>
     </div>
   );
